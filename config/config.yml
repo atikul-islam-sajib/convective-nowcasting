@@ -1,0 +1,70 @@
+paths:
+  satellite_root: /home/fe/sajib/scratch/weather-data/satellite_de
+  radar_root: /home/fe/sajib/scratch/weather-data/radar_de
+  
+satellite:
+  channels:
+  - 7
+  - 9
+  cadence_minutes: 5
+  nodata_value: -1000.0
+  fill_value: 0.0
+
+temporal:
+  history_minutes: 60
+  radar_lead_minutes: 15
+
+spatial:
+  mode: resize
+  height: 256
+  width: 256
+  interpolation: bilinear
+
+transform:
+  satellite:
+    normalization: zscore
+    clip_min: null
+    clip_max: null
+  radar:
+    log_transform: true
+    clip_max: 400.0
+
+patch:
+  enabled: false
+  height: 32
+  width: 32
+  stride: 16
+
+metadata:
+  enabled: true
+  percentiles:
+  - 95
+  - 99
+  datetime_format: '%Y-%m-%d %H:%M:%S'
+  csv_path: metadata/metadata_{split}.csv
+
+dataset:
+  years:
+  - 2023
+
+splits:
+  train:
+    start: '2021-01-01 00:30:00'
+    end: '2023-12-31 23:55:00'
+  val:
+    start: '2024-01-01 00:00:00'
+    end: '2024-09-30 23:55:00'
+  test:
+    start: '2024-10-01 00:00:00'
+    end: '2024-12-31 23:55:00'
+
+data_policy:
+  nan_handling:
+    mode: discard_all_nan
+    max_nan_ratio: 0.2
+  mask_nans: true
+
+dataloader:
+  batch_size: 8
+  num_workers: 4
+  shuffle_train: false
