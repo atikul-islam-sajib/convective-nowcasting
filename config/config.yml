@@ -1,7 +1,7 @@
 paths:
-  satellite_root: /home/fe/sajib/scratch/weather-data/satellite_de
-  radar_root: /home/fe/sajib/scratch/weather-data/radar_de
-  
+  satellite_root: /home/sajib/Desktop/satellite_de
+  radar_root: /home/sajib/Desktop/radar_de
+
 satellite:
   channels:
   - 7
@@ -11,7 +11,7 @@ satellite:
   fill_value: 0.0
 
 temporal:
-  history_minutes: 60
+  history_minutes: 30
   radar_lead_minutes: 15
 
 spatial:
@@ -45,7 +45,10 @@ metadata:
 
 dataset:
   years:
+  - 2021
+  - 2022
   - 2023
+  - 2024
 
 splits:
   train:
