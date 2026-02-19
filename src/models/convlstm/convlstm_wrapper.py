@@ -2,10 +2,6 @@ import torch
 import torch.nn as nn
 
 
-import torch
-import torch.nn as nn
-
-
 class ConvLSTMWrapper(nn.Module):
     def __init__(self, encoder, decoder, num_channels, device='cpu'):
         super().__init__()

@@ -9,10 +9,10 @@
 @Description:   encoder
 '''
 
-from torch import nn
-from src.models.convlstm.utils import make_layers
 import torch
 import logging
+from torch import nn
+from models.convlstm.utils import make_layers
 
 
 class Encoder(nn.Module):

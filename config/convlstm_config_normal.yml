@@ -1,0 +1,77 @@
+# ConvLSTM Normal Training Configuration - Direct 60min Training
+# Edit values here, no need to touch Python code!
+# This works better for 45/30 or 30/15min data
+
+# Data paths
+metadata_train: "metadata/train_sampled.csv"
+metadata_val: "metadata/val_sampled.csv"
+main_config: "config/config.yml"
+
+# Training parameters
+num_epochs: 2
+batch_size: 2
+gradient_accumulation_steps: 8
+num_workers: 8
+use_mixed_precision: true
+grad_clip: 1.0
+
+# Learning rate
+learning_rate: 0.0001
+max_lr: 0.0005
+min_lr: 0.000001
+
+# Optimizer
+weight_decay: 0.0001
+beta1: 0.9
+beta2: 0.999
+
+# Scheduler
+scheduler_type: "onecycle"  # Options: onecycle, cosine_restart, reduce_plateau
+pct_start: 0.3
+div_factor: 25
+final_div_factor: 1000
+T_0: 10
+T_mult: 2
+scheduler_patience: 3
+scheduler_factor: 0.5
+
+# Loss function
+loss_type: "hybrid_weighted_mae"  # Options: masked_mse, hybrid_weighted_mse, hybrid_weighted_mae
+
+# Loss weights
+weight_threshold_1: 15.0
+weight_value_1: 2.0
+weight_threshold_2: 50.0
+weight_value_2: 5.0
+weight_threshold_3: 100.0
+weight_value_3: 7.0
+
+# Thresholds
+operational_threshold: 15.0
+storm_threshold_json: "metadata/storm_threshold.json"
+use_extreme_from_data: false
+manual_extreme_threshold: 50.0
+
+# Early stopping
+patience: 35
+min_delta: 0.00001
+
+# Visualization
+num_viz_samples: 8
+max_batches_to_search: 20
+viz_every_n_epochs: 1
+
+# Storm detection
+storm_min_pixels: 1
+morphology_disk_size: 4
+storm_min_area_km2: 50.0
+storm_max_area_km2: 150.0
+pixel_area_km2: 1.0
+
+# Output directories
+checkpoint_dir: "Checkpoints_Normal"
+train_viz_dir: "TrainViz_Normal"
+val_viz_dir: "ValViz_Normal"
+
+# Resume training (set to checkpoint path or null)
+resume_from: null
