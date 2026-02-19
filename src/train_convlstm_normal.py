@@ -30,6 +30,7 @@ from utils.config_loader import load_config
 from models.convlstm.encoder import Encoder
 from models.convlstm.decoder import Decoder
 from torch.cuda.amp import autocast, GradScaler
+from utils.detect_storms import detect_storms_two_level
 from losses.hybrid_weighted_mae import HybridWeightedMAE
 from losses.hybrid_weighted_mse import HybridWeightedMSE
 from losses.hybrid_weighted_mae import HybridWeightedMAE
@@ -111,54 +112,6 @@ def load_two_thresholds(cfg):
         extreme_source = "Manual fallback"
 
     return operational_thr, extreme_thr, extreme_source
-
-
-# ============================================================
-# STORM DETECTION
-# ============================================================
-def detect_storms_two_level(
-    rain_mm_h,
-    operational_thr,
-    extreme_thr,
-    min_pixels=10,
-    disk_size=4,
-    min_area_km2=10.0,
-    max_area_km2=100.0,
-    pixel_area_km2=1.0,
-):
-    valid = np.isfinite(rain_mm_h)
-    if valid.sum() == 0:
-        empty = np.zeros_like(rain_mm_h, dtype=bool)
-        return empty, empty, 0, 0
-
-    mask_operational = valid & (rain_mm_h >= operational_thr)
-    if mask_operational.sum() == 0:
-        empty = np.zeros_like(rain_mm_h, dtype=bool)
-        return empty, empty, 0, 0
-
-    mask_operational = closing(mask_operational, disk(disk_size))
-    labeled_op, n_candidates = label(mask_operational)
-
-    final_operational_mask = np.zeros_like(mask_operational, dtype=bool)
-    n_operational_storms = 0
-
-    for region_id in range(1, n_candidates + 1):
-        region = labeled_op == region_id
-        area_km2 = region.sum() * pixel_area_km2
-        if min_area_km2 <= area_km2 <= max_area_km2:
-            final_operational_mask[region] = True
-            n_operational_storms += 1
-
-    mask_extreme = final_operational_mask & (rain_mm_h >= extreme_thr)
-    if mask_extreme.sum() == 0:
-        return final_operational_mask, mask_extreme, n_operational_storms, 0
-
-    mask_extreme = closing(mask_extreme, disk(2))
-    mask_extreme = remove_small_objects(mask_extreme, min_size=10)
-    labeled_ext, n_extreme_cores = label(mask_extreme)
-
-    return final_operational_mask, mask_extreme, n_operational_storms, n_extreme_cores
-
 
 def find_batch_with_best_storms(
     loader, transform, operational_thr, device, max_batches=20
@@ -347,6 +300,32 @@ def save_visualizations(
     filepath = os.path.join(outdir, f"epoch_{epoch:03d}.png")
     fig.savefig(filepath, dpi=150, bbox_inches="tight")
     plt.close(fig)
+
+def compute_ssim(pred, target, mask):
+    pred = pred[:, 0]
+    target = target[:, 0]
+    mask = mask[:, 0].bool()
+    
+    if not mask.any():
+        return 0.0
+    
+    pred_masked = pred[mask]
+    target_masked = target[mask]
+    
+    mu_pred = pred_masked.mean()
+    mu_target = target_masked.mean()
+    var_pred = pred_masked.var()
+    var_target = target_masked.var()
+    cov = ((pred_masked - mu_pred) * (target_masked - mu_target)).mean()
+    
+    data_range = 5.6
+    C1 = (0.01 * data_range) ** 2
+    C2 = (0.03 * data_range) ** 2
+    
+    ssim = ((2 * mu_pred * mu_target + C1) * (2 * cov + C2)) / \
+           ((mu_pred ** 2 + mu_target ** 2 + C1) * (var_pred + var_target + C2))
+    
+    return ssim.item()
 
 
 def compute_psnr_mm(pred_log, target_log, mask, eps=1e-3, max_val=400.0):
