@@ -1,0 +1,10 @@
+{
+    "percentile": 95.0,
+    "global_threshold": 4.91796875,
+    "unit": "mm/5min",
+    "source_csv": "metadata/train_sampled.csv",
+    "total_pixels": 1149026021,
+    "sample_size_limit": 10000000,
+    "sampling_method": "chunked_ultra_defensive",
+    "note": "Computed using chunked sampling with manual percentile calculation"
+}
