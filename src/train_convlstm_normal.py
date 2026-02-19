@@ -70,42 +70,11 @@ from torch.optim.lr_scheduler import (
 
 
 def load_training_config(yaml_path="config/convlstm_config_normal.yml"):
-    """
-    Load training configuration from a YAML file.
-
-    Parameters
-    ----------
-    yaml_path : str, optional
-        Path to the YAML configuration file.
-        Default is "config/convlstm_config_normal.yml".
-
-    Returns
-    -------
-    dict
-        Dictionary containing training configuration parameters.
-    """
     with open(yaml_path, "r") as f:
         return yaml.safe_load(f)
 
 
 class TrainingConfig:
-    """
-    Container for training configuration parameters.
-
-    This class takes a configuration dictionary (typically parsed from YAML)
-    and exposes keys as attributes. It also assigns `device` automatically.
-
-    Parameters
-    ----------
-    config_dict : dict
-        Parsed configuration dictionary.
-
-    Attributes
-    ----------
-    device : torch.device
-        CUDA device if available, otherwise CPU.
-    """
-
     def __init__(self, config_dict):
         for key, value in config_dict.items():
             setattr(self, key, value)
@@ -136,6 +105,7 @@ class ConvLSTMWrapper(nn.Module):
     If `TC % num_channels == 0`, timesteps are inferred as `T = TC // num_channels`.
     Otherwise, the wrapper falls back to `num_timesteps`.
     """
+
     def __init__(self, num_channels, num_timesteps=1, device="cpu"):
         super().__init__()
         self.num_channels = num_channels
@@ -163,32 +133,8 @@ class ConvLSTMWrapper(nn.Module):
         out = out.squeeze(1)
         return out
 
+
 def load_two_thresholds(cfg):
-    """
-    Load operational and extreme storm thresholds.
-
-    Operational threshold is taken directly from the training config.
-    Extreme threshold is either:
-        - loaded from a JSON file computed from data (percentile-based), or
-        - taken from a manual fallback threshold in config.
-
-    Parameters
-    ----------
-    cfg : TrainingConfig
-        Training configuration object.
-
-    Returns
-    -------
-    tuple
-        (operational_thr, extreme_thr, extreme_source)
-
-        operational_thr : float
-            Operational storm threshold in mm/h.
-        extreme_thr : float
-            Extreme storm threshold in mm/h.
-        extreme_source : str
-            String description of how the extreme threshold was selected.
-    """
     operational_thr = cfg.operational_threshold
 
     if cfg.use_extreme_from_data and os.path.exists(cfg.storm_threshold_json):
@@ -207,33 +153,6 @@ def load_two_thresholds(cfg):
 def find_batch_with_best_storms(
     loader, transform, operational_thr, device, max_batches=20
 ):
-    """
-    Search for a batch containing the strongest storms for visualization.
-
-    Iterates through the first `max_batches` batches of a loader and selects
-    the batch with the highest 99th percentile rain rate (computed over valid
-    masked pixels). Used to produce more informative visualizations.
-
-    Parameters
-    ----------
-    loader : torch.utils.data.DataLoader
-        DataLoader providing (inputs, targets, masks).
-    transform : callable
-        Transform that converts model-space radar values into mm/h (typically
-        inverse log transform).
-    operational_thr : float
-        Operational storm threshold in mm/h (used only indirectly; retained
-        for future logic / symmetry with visualization pipeline).
-    device : torch.device or str
-        Device (not strictly required here; kept for interface consistency).
-    max_batches : int, optional
-        Maximum number of batches to search. Default is 20.
-
-    Returns
-    -------
-    tuple
-        (inputs, targets, masks) batch tensors.
-    """
     best_batch = None
     best_p99 = 0.0
 
@@ -263,43 +182,10 @@ def find_batch_with_best_storms(
 
     return best_batch
 
+
 def create_comparison_grid_two_level(
     preds, gts, masks, transform, cfg, operational_thr, extreme_thr, num_samples=8
 ):
-    """
-    Create a visualization grid comparing predictions and ground truth.
-
-    The grid shows:
-        - Ground truth rain rates with storm overlays.
-        - Predicted rain rates with storm overlays.
-    Storms are detected using two thresholds:
-        - operational_thr (convective)
-        - extreme_thr (severe/extreme)
-
-    Parameters
-    ----------
-    preds : torch.Tensor
-        Predicted radar tensor of shape [B, 1, H, W] in model space.
-    gts : torch.Tensor
-        Ground truth radar tensor of shape [B, 1, H, W] in model space.
-    masks : torch.Tensor
-        Validity mask tensor of shape [B, 1, H, W] (True/1 indicates valid pixels).
-    transform : callable
-        Inverse transform mapping model-space radar values to mm/h.
-    cfg : TrainingConfig
-        Training configuration containing storm detection parameters.
-    operational_thr : float
-        Operational storm threshold in mm/h.
-    extreme_thr : float
-        Extreme storm threshold in mm/h.
-    num_samples : int, optional
-        Number of samples to plot (max). Default is 8.
-
-    Returns
-    -------
-    matplotlib.figure.Figure
-        The generated matplotlib Figure.
-    """
     RAIN_LEVELS = [5, 10, 20, 30, 50, 100]
     RAIN_COLORS = ["#66bb6a", "#ffeb3b", "#ff9800", "#f44336", "#b71c1c", "#7f0000"]
     RAIN_CMAP = ListedColormap(RAIN_COLORS)
@@ -449,6 +335,7 @@ def save_visualizations(
     fig.savefig(filepath, dpi=150, bbox_inches="tight")
     plt.close(fig)
 
+
 def train_epoch(
     model,
     loader,
@@ -463,44 +350,6 @@ def train_epoch(
     total_epochs,
     step_per_batch,
 ):
-    """
-    Train the model for one epoch.
-
-    Supports gradient accumulation, gradient clipping, and mixed precision.
-    Computes training metrics per batch and returns epoch-averaged results.
-
-    Parameters
-    ----------
-    model : torch.nn.Module
-        Model to train.
-    loader : torch.utils.data.DataLoader
-        Training data loader providing (inputs, targets, masks).
-    loss_fn : callable
-        Loss function with signature loss_fn(pred, target, mask).
-    opt : torch.optim.Optimizer
-        Optimizer instance.
-    scheduler : torch.optim.lr_scheduler._LRScheduler or None
-        Learning-rate scheduler. If `step_per_batch=True`, stepped each update.
-    device : torch.device or str
-        Training device.
-    grad_clip : float
-        Max norm for gradient clipping.
-    scaler : torch.cuda.amp.GradScaler or None
-        AMP gradient scaler (None disables mixed precision).
-    accumulation_steps : int
-        Number of batches to accumulate gradients before optimizer step.
-    epoch : int
-        Current epoch index (for logging).
-    total_epochs : int
-        Total number of epochs (for logging).
-    step_per_batch : bool
-        If True, step scheduler after each optimizer update.
-
-    Returns
-    -------
-    dict
-        Dictionary with keys: ["loss", "mae", "rmse", "ssim", "psnr"].
-    """
     model.train()
 
     total_loss = 0.0
@@ -624,6 +473,7 @@ def validate(model, loader, loss_fn, device):
         "ssim": total_ssim / n,
         "psnr": total_psnr / n,
     }
+
 
 def train(
     model,
@@ -908,6 +758,7 @@ def train(
     print(f"\n{'='*80}")
     print(f" TRAINING COMPLETE - Best Val Loss: {best_val_loss:.6f}")
     print(f"{'='*80}\n")
+
 
 # MAIN
 if __name__ == "__main__":
