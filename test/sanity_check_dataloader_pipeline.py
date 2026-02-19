@@ -48,10 +48,7 @@ def test_dataset_pipeline(config_yml, metadata_csv, n_samples=20):
     # Create inverse transform
     inv_transform = SoftLogTransform(eps=1e-3, inverse=True)
     
-    # ============================================================
     # TEST SAMPLES
-    # ============================================================
-    
     print(f"\n" + "="*80)
     print(f"Testing {n_samples} random samples...")
     print("="*80)
@@ -108,10 +105,8 @@ def test_dataset_pipeline(config_yml, metadata_csv, n_samples=20):
             print(f"Error processing sample {idx}: {e}")
             continue
     
-    # ============================================================
-    # SUMMARY STATISTICS
-    # ============================================================
-    
+
+    # SUMMARY STATISTICS    
     print("\n" + "="*80)
     print("SUMMARY STATISTICS")
     print("="*80)
@@ -164,9 +159,9 @@ def test_dataset_pipeline(config_yml, metadata_csv, n_samples=20):
             print(f"   Maximum value seen: {max_val_overall:.2f} mm/h")
             print(f"   {100*samples_above_12/len(indices):.1f}% of samples have rain > 12 mm/h")
             print(f"   {100*samples_above_75/len(indices):.1f}% of samples have storms > 75 mm/h")
-            print(f"\n   ✓ 12 mm/h clipping has been successfully removed")
-            print(f"   ✓ Full intensity range is preserved")
-            print(f"   ✓ Ready for training!")
+            print(f"\n  12 mm/h clipping has been successfully removed")
+            print(f"    Full intensity range is preserved")
+            print(f"    Ready for training!")
         
         else:
             print(f"\n  UNCERTAIN")
@@ -179,10 +174,7 @@ def test_dataset_pipeline(config_yml, metadata_csv, n_samples=20):
     
     print("\n" + "="*80)
     
-    # ============================================================
     # TEST INVERSE TRANSFORM DIRECTLY
-    # ============================================================
-    
     print("\n" + "="*80)
     print("TESTING INVERSE TRANSFORM DIRECTLY")
     print("="*80)
