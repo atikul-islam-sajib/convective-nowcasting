@@ -1,15 +1,39 @@
 """
-NORMAL TRAINING - DIRECT 60MIN PREDICTION
-=========================================
-✅ All config from YAML (config/convlstm_config_normal.yml)
-✅ All code in one file
-✅ Auto-resume from checkpoints
-✅ Multiple loss functions
-✅ Full metrics (SSIM, PSNR)
-✅ Storm detection visualization
+Normal Training Script - Direct 60-Minute Radar Prediction (ConvLSTM).
 
-Usage:
-    python train_normal.py
+This script trains a ConvLSTM-based encoder–decoder model to predict a
+future radar field directly at a fixed lead time (e.g., 60 minutes),
+using a temporal stack of satellite history and radar history as input.
+
+Key features
+------------
+- Configuration-driven training via YAML.
+- Automatic checkpointing and optional resume.
+- Support for multiple loss functions:
+    - MaskedMSE
+    - HybridWeightedMSE
+    - HybridWeightedMAE
+- Mixed precision training (AMP) with gradient scaling (optional).
+- Gradient accumulation and gradient clipping.
+- Learning-rate schedulers:
+    - OneCycleLR
+    - CosineAnnealingWarmRestarts
+    - ReduceLROnPlateau
+- Full validation metrics:
+    - MAE, RMSE, SSIM, PSNR
+- Storm detection overlays and visualization grids.
+
+Outputs
+-------
+- Checkpoints:
+    - <checkpoint_dir>/last.pth  (latest state)
+    - <checkpoint_dir>/best.pth  (best validation loss)
+- Visualizations:
+    - <val_viz_dir>/epoch_XXX.png
+
+Typical usage
+-------------
+python train_convlstm_normal.py
 """
 
 import os
@@ -24,18 +48,18 @@ import torch.optim as optim
 from scipy.ndimage import label
 import matplotlib.pyplot as plt
 from models.convlstm.model import ED
+from losses.masked_mse import MaskedMSE
 from torch.utils.data import DataLoader
 from utils.data_policy import DataPolicy
 from utils.config_loader import load_config
 from models.convlstm.encoder import Encoder
 from models.convlstm.decoder import Decoder
+from metrics.metrics import compute_metrics
 from torch.cuda.amp import autocast, GradScaler
 from utils.detect_storms import detect_storms_two_level
-from losses.hybrid_weighted_mae import HybridWeightedMAE
 from losses.hybrid_weighted_mse import HybridWeightedMSE
 from losses.hybrid_weighted_mae import HybridWeightedMAE
 from matplotlib.colors import ListedColormap, BoundaryNorm
-from skimage.morphology import closing, remove_small_objects, disk
 from datasets.satellite_radar_dataset import SatelliteRadarDataset, SoftLogTransform
 from models.convlstm.net_params import convlstm_encoder_params, convlstm_decoder_params
 from torch.optim.lr_scheduler import (
@@ -45,17 +69,42 @@ from torch.optim.lr_scheduler import (
 )
 
 
-# ============================================================
-# CONFIG LOADER
-# ============================================================
 def load_training_config(yaml_path="config/convlstm_config_normal.yml"):
-    """Load training configuration from YAML"""
+    """
+    Load training configuration from a YAML file.
+
+    Parameters
+    ----------
+    yaml_path : str, optional
+        Path to the YAML configuration file.
+        Default is "config/convlstm_config_normal.yml".
+
+    Returns
+    -------
+    dict
+        Dictionary containing training configuration parameters.
+    """
     with open(yaml_path, "r") as f:
         return yaml.safe_load(f)
 
 
 class TrainingConfig:
-    """Training configuration from YAML"""
+    """
+    Container for training configuration parameters.
+
+    This class takes a configuration dictionary (typically parsed from YAML)
+    and exposes keys as attributes. It also assigns `device` automatically.
+
+    Parameters
+    ----------
+    config_dict : dict
+        Parsed configuration dictionary.
+
+    Attributes
+    ----------
+    device : torch.device
+        CUDA device if available, otherwise CPU.
+    """
 
     def __init__(self, config_dict):
         for key, value in config_dict.items():
@@ -63,10 +112,30 @@ class TrainingConfig:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-# ============================================================
-# ConvLSTM WRAPPER
-# ============================================================
 class ConvLSTMWrapper(nn.Module):
+    """
+    Wrapper around the ConvLSTM encoder–decoder (ED) model.
+
+    This wrapper converts a flattened channel-first tensor of shape
+    [B, T*C, H, W] into the sequence form expected by the ED model:
+    [B, T, C, H, W], runs the model, and returns the predicted radar field.
+
+    Parameters
+    ----------
+    num_channels : int
+        Number of input channels per timestep.
+    num_timesteps : int, optional
+        Expected number of timesteps. Used when inference cannot deduce
+        timesteps cleanly from input shape.
+        Default is 1.
+    device : str or torch.device, optional
+        Device to run the model on. Default is "cpu".
+
+    Notes
+    -----
+    If `TC % num_channels == 0`, timesteps are inferred as `T = TC // num_channels`.
+    Otherwise, the wrapper falls back to `num_timesteps`.
+    """
     def __init__(self, num_channels, num_timesteps=1, device="cpu"):
         super().__init__()
         self.num_channels = num_channels
@@ -94,11 +163,32 @@ class ConvLSTMWrapper(nn.Module):
         out = out.squeeze(1)
         return out
 
-
-# ============================================================
-# THRESHOLD LOADING
-# ============================================================
 def load_two_thresholds(cfg):
+    """
+    Load operational and extreme storm thresholds.
+
+    Operational threshold is taken directly from the training config.
+    Extreme threshold is either:
+        - loaded from a JSON file computed from data (percentile-based), or
+        - taken from a manual fallback threshold in config.
+
+    Parameters
+    ----------
+    cfg : TrainingConfig
+        Training configuration object.
+
+    Returns
+    -------
+    tuple
+        (operational_thr, extreme_thr, extreme_source)
+
+        operational_thr : float
+            Operational storm threshold in mm/h.
+        extreme_thr : float
+            Extreme storm threshold in mm/h.
+        extreme_source : str
+            String description of how the extreme threshold was selected.
+    """
     operational_thr = cfg.operational_threshold
 
     if cfg.use_extreme_from_data and os.path.exists(cfg.storm_threshold_json):
@@ -113,9 +203,37 @@ def load_two_thresholds(cfg):
 
     return operational_thr, extreme_thr, extreme_source
 
+
 def find_batch_with_best_storms(
     loader, transform, operational_thr, device, max_batches=20
 ):
+    """
+    Search for a batch containing the strongest storms for visualization.
+
+    Iterates through the first `max_batches` batches of a loader and selects
+    the batch with the highest 99th percentile rain rate (computed over valid
+    masked pixels). Used to produce more informative visualizations.
+
+    Parameters
+    ----------
+    loader : torch.utils.data.DataLoader
+        DataLoader providing (inputs, targets, masks).
+    transform : callable
+        Transform that converts model-space radar values into mm/h (typically
+        inverse log transform).
+    operational_thr : float
+        Operational storm threshold in mm/h (used only indirectly; retained
+        for future logic / symmetry with visualization pipeline).
+    device : torch.device or str
+        Device (not strictly required here; kept for interface consistency).
+    max_batches : int, optional
+        Maximum number of batches to search. Default is 20.
+
+    Returns
+    -------
+    tuple
+        (inputs, targets, masks) batch tensors.
+    """
     best_batch = None
     best_p99 = 0.0
 
@@ -145,13 +263,43 @@ def find_batch_with_best_storms(
 
     return best_batch
 
-
-# ============================================================
-# VISUALIZATION
-# ============================================================
 def create_comparison_grid_two_level(
     preds, gts, masks, transform, cfg, operational_thr, extreme_thr, num_samples=8
 ):
+    """
+    Create a visualization grid comparing predictions and ground truth.
+
+    The grid shows:
+        - Ground truth rain rates with storm overlays.
+        - Predicted rain rates with storm overlays.
+    Storms are detected using two thresholds:
+        - operational_thr (convective)
+        - extreme_thr (severe/extreme)
+
+    Parameters
+    ----------
+    preds : torch.Tensor
+        Predicted radar tensor of shape [B, 1, H, W] in model space.
+    gts : torch.Tensor
+        Ground truth radar tensor of shape [B, 1, H, W] in model space.
+    masks : torch.Tensor
+        Validity mask tensor of shape [B, 1, H, W] (True/1 indicates valid pixels).
+    transform : callable
+        Inverse transform mapping model-space radar values to mm/h.
+    cfg : TrainingConfig
+        Training configuration containing storm detection parameters.
+    operational_thr : float
+        Operational storm threshold in mm/h.
+    extreme_thr : float
+        Extreme storm threshold in mm/h.
+    num_samples : int, optional
+        Number of samples to plot (max). Default is 8.
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+        The generated matplotlib Figure.
+    """
     RAIN_LEVELS = [5, 10, 20, 30, 50, 100]
     RAIN_COLORS = ["#66bb6a", "#ffeb3b", "#ff9800", "#f44336", "#b71c1c", "#7f0000"]
     RAIN_CMAP = ListedColormap(RAIN_COLORS)
@@ -301,77 +449,6 @@ def save_visualizations(
     fig.savefig(filepath, dpi=150, bbox_inches="tight")
     plt.close(fig)
 
-def compute_ssim(pred, target, mask):
-    pred = pred[:, 0]
-    target = target[:, 0]
-    mask = mask[:, 0].bool()
-    
-    if not mask.any():
-        return 0.0
-    
-    pred_masked = pred[mask]
-    target_masked = target[mask]
-    
-    mu_pred = pred_masked.mean()
-    mu_target = target_masked.mean()
-    var_pred = pred_masked.var()
-    var_target = target_masked.var()
-    cov = ((pred_masked - mu_pred) * (target_masked - mu_target)).mean()
-    
-    data_range = 5.6
-    C1 = (0.01 * data_range) ** 2
-    C2 = (0.03 * data_range) ** 2
-    
-    ssim = ((2 * mu_pred * mu_target + C1) * (2 * cov + C2)) / \
-           ((mu_pred ** 2 + mu_target ** 2 + C1) * (var_pred + var_target + C2))
-    
-    return ssim.item()
-
-
-def compute_psnr_mm(pred_log, target_log, mask, eps=1e-3, max_val=400.0):
-    pred_log = pred_log[:, 0]
-    target_log = target_log[:, 0]
-    mask = mask[:, 0].bool()
-
-    if not mask.any():
-        return 0.0
-
-    pred_mm = torch.clamp((10.0**pred_log - eps) * 12.0, 0.0, max_val)
-    target_mm = torch.clamp((10.0**target_log - eps) * 12.0, 0.0, max_val)
-
-    mse = ((pred_mm[mask] - target_mm[mask]) ** 2).mean()
-
-    if mse == 0:
-        return float("inf")
-
-    psnr = 20 * torch.log10(torch.tensor(max_val, device=mse.device) / torch.sqrt(mse))
-
-    return psnr.item()
-
-
-def compute_metrics(pred, target, mask):
-    pred_single = pred[:, 0]
-    target_single = target[:, 0]
-    mask_single = mask[:, 0].bool()
-
-    if mask_single.any():
-        mae = torch.abs(pred_single[mask_single] - target_single[mask_single]).mean()
-        rmse = torch.sqrt(
-            ((pred_single[mask_single] - target_single[mask_single]) ** 2).mean()
-        )
-    else:
-        mae = torch.abs(pred_single - target_single).mean()
-        rmse = torch.sqrt(((pred_single - target_single) ** 2).mean())
-
-    ssim = compute_ssim(pred, target, mask)
-    psnr = compute_psnr_mm(pred, target, mask, eps=1e-3, max_val=400.0)
-
-    return {"mae": mae.item(), "rmse": rmse.item(), "ssim": ssim, "psnr": psnr}
-
-
-# ============================================================
-# TRAINING LOOPS
-# ============================================================
 def train_epoch(
     model,
     loader,
@@ -386,6 +463,44 @@ def train_epoch(
     total_epochs,
     step_per_batch,
 ):
+    """
+    Train the model for one epoch.
+
+    Supports gradient accumulation, gradient clipping, and mixed precision.
+    Computes training metrics per batch and returns epoch-averaged results.
+
+    Parameters
+    ----------
+    model : torch.nn.Module
+        Model to train.
+    loader : torch.utils.data.DataLoader
+        Training data loader providing (inputs, targets, masks).
+    loss_fn : callable
+        Loss function with signature loss_fn(pred, target, mask).
+    opt : torch.optim.Optimizer
+        Optimizer instance.
+    scheduler : torch.optim.lr_scheduler._LRScheduler or None
+        Learning-rate scheduler. If `step_per_batch=True`, stepped each update.
+    device : torch.device or str
+        Training device.
+    grad_clip : float
+        Max norm for gradient clipping.
+    scaler : torch.cuda.amp.GradScaler or None
+        AMP gradient scaler (None disables mixed precision).
+    accumulation_steps : int
+        Number of batches to accumulate gradients before optimizer step.
+    epoch : int
+        Current epoch index (for logging).
+    total_epochs : int
+        Total number of epochs (for logging).
+    step_per_batch : bool
+        If True, step scheduler after each optimizer update.
+
+    Returns
+    -------
+    dict
+        Dictionary with keys: ["loss", "mae", "rmse", "ssim", "psnr"].
+    """
     model.train()
 
     total_loss = 0.0
@@ -510,10 +625,6 @@ def validate(model, loader, loss_fn, device):
         "psnr": total_psnr / n,
     }
 
-
-# ============================================================
-# MAIN TRAINING FUNCTION
-# ============================================================
 def train(
     model,
     train_loader,
@@ -524,8 +635,43 @@ def train(
     extreme_thr,
     start_epoch=1,
 ):
-    """Main training loop with auto-resume"""
+    """
+    Full training loop with checkpointing, validation, and visualization.
 
+    This function:
+        - Builds the requested loss function, optimizer, and LR scheduler.
+        - Optionally resumes training from a checkpoint.
+        - Trains for up to `cfg.num_epochs` epochs with early stopping.
+        - Evaluates on the validation set each epoch.
+        - Saves:
+            - last checkpoint each epoch
+            - best checkpoint when validation improves
+        - Periodically saves storm-focused visualization grids.
+
+    Parameters
+    ----------
+    model : torch.nn.Module
+        Model to train.
+    train_loader : torch.utils.data.DataLoader
+        Training DataLoader.
+    val_loader : torch.utils.data.DataLoader
+        Validation DataLoader.
+    cfg : TrainingConfig
+        Training configuration object.
+    transform : callable
+        Inverse transform mapping model-space radar values to mm/h, used
+        for storm detection and visualization.
+    operational_thr : float
+        Operational storm threshold in mm/h (storm detection).
+    extreme_thr : float
+        Extreme storm threshold in mm/h (storm detection).
+    start_epoch : int, optional
+        Epoch index to start from (used for resuming). Default is 1.
+
+    Returns
+    -------
+    None
+    """
     print("\n" + "=" * 80)
     print("🔧 TRAINING CONFIGURATION")
     print("=" * 80)
@@ -598,13 +744,13 @@ def train(
         )
         step_per_batch = True
         print(
-            f"✅ OneCycleLR: {cfg.max_lr/cfg.div_factor:.2e} → {cfg.max_lr:.2e} → {cfg.max_lr/cfg.final_div_factor:.2e}"
+            f" OneCycleLR: {cfg.max_lr/cfg.div_factor:.2e} → {cfg.max_lr:.2e} → {cfg.max_lr/cfg.final_div_factor:.2e}"
         )
     elif cfg.scheduler_type == "cosine_restart":
         scheduler = CosineAnnealingWarmRestarts(
             opt, T_0=cfg.T_0, T_mult=cfg.T_mult, eta_min=cfg.min_lr
         )
-        print(f"✅ CosineAnnealingWarmRestarts: {cfg.max_lr:.2e} → {cfg.min_lr:.2e}")
+        print(f" CosineAnnealingWarmRestarts: {cfg.max_lr:.2e} → {cfg.min_lr:.2e}")
     else:
         scheduler = ReduceLROnPlateau(
             opt,
@@ -613,7 +759,7 @@ def train(
             patience=cfg.scheduler_patience,
             min_lr=cfg.min_lr,
         )
-        print(f"✅ ReduceLROnPlateau")
+        print(f" ReduceLROnPlateau")
 
     # Mixed precision
     scaler = GradScaler() if cfg.use_mixed_precision else None
@@ -627,9 +773,9 @@ def train(
     epochs_without_improvement = 0
     loss_history = []
 
-    # ✅ LOAD CHECKPOINT IF RESUMING
+    # LOAD CHECKPOINT IF RESUMING
     if cfg.resume_from and os.path.exists(cfg.resume_from):
-        print(f"\n🔄 RESUMING FROM: {cfg.resume_from}")
+        print(f"\n RESUMING FROM: {cfg.resume_from}")
         checkpoint = torch.load(cfg.resume_from, map_location=cfg.device)
 
         model.load_state_dict(checkpoint["model_state_dict"])
@@ -641,7 +787,7 @@ def train(
         best_val_loss = checkpoint.get("best_val_loss", float("inf"))
         loss_history = checkpoint.get("loss_history", [])
 
-        print(f"✅ Resumed from epoch {checkpoint['epoch']}")
+        print(f" Resumed from epoch {checkpoint['epoch']}")
         print(f"   Best val loss: {best_val_loss:.6f}\n")
 
     for epoch in range(start_epoch, cfg.num_epochs + 1):
@@ -695,7 +841,7 @@ def train(
             improvement_rate = (
                 (loss_history[-2] - loss_history[-1]) / loss_history[-2] * 100
             )
-            print(f"    Improvement: {improvement_rate:+.2f}% from last epoch")
+            print(f" Improvement: {improvement_rate:+.2f}% from last epoch")
 
         # Visualize
         if epoch % cfg.viz_every_n_epochs == 0 or epoch == 1:
@@ -748,28 +894,25 @@ def train(
                 os.path.join(cfg.checkpoint_dir, "best.pth"),
             )
 
-            print(f"\n  ★★★ NEW BEST MODEL! (improved by {improvement:.6f}) ★★★")
+            print(f"\n   NEW BEST MODEL! (improved by {improvement:.6f}) ★★★")
         else:
             epochs_without_improvement += 1
             print(f"  No improvement for {epochs_without_improvement} epoch(s)")
 
             if epochs_without_improvement >= cfg.patience:
                 print(f"\n{'='*80}")
-                print(f"⚡ EARLY STOPPING after {epoch} epochs")
+                print(f" EARLY STOPPING after {epoch} epochs")
                 print(f"{'='*80}")
                 break
 
     print(f"\n{'='*80}")
-    print(f"🎉 TRAINING COMPLETE - Best Val Loss: {best_val_loss:.6f}")
+    print(f" TRAINING COMPLETE - Best Val Loss: {best_val_loss:.6f}")
     print(f"{'='*80}\n")
 
-
-# ============================================================
 # MAIN
-# ============================================================
 if __name__ == "__main__":
     print("\n" + "=" * 80)
-    print("🚀 NORMAL TRAINING - DIRECT 60MIN PREDICTION")
+    print(" NORMAL TRAINING - DIRECT 60MIN PREDICTION")
     print("=" * 80)
     print("Loading configuration from: config/convlstm_config_normal.yml")
     print("=" * 80 + "\n")
@@ -797,7 +940,7 @@ if __name__ == "__main__":
     )
 
     # Load datasets
-    print("\n📂 Loading datasets...")
+    print("\n Loading datasets...")
     train_dataset = SatelliteRadarDataset(
         config=config,
         metadata_csv=cfg.metadata_train,
@@ -814,7 +957,7 @@ if __name__ == "__main__":
         use_cache=False,
     )
 
-    print(f"✅ Train: {len(train_dataset):,} | Val: {len(val_dataset):,}")
+    print(f" Train: {len(train_dataset):,} | Val: {len(val_dataset):,}")
 
     # Data loaders
     train_loader = DataLoader(
@@ -844,7 +987,7 @@ if __name__ == "__main__":
     channels_per_timestep = 3
     num_timesteps = n_channels // channels_per_timestep
 
-    print(f"\n🏗️  Building ConvLSTM Model...")
+    print(f"\n  Building ConvLSTM Model...")
     print(f"   Input channels: {n_channels}")
     print(f"   Timesteps: {num_timesteps}")
 
@@ -861,20 +1004,20 @@ if __name__ == "__main__":
     # Transform
     transform = SoftLogTransform(eps=1e-3, inverse=True)
 
-    # ✅ CHECK FOR RESUME
+    # CHECK FOR RESUME
     start_epoch = 1
     if cfg.resume_from:
         if os.path.exists(cfg.resume_from):
-            print(f"\n🔄 Will resume from: {cfg.resume_from}")
+            print(f"\n Will resume from: {cfg.resume_from}")
         else:
-            print(f"\n⚠️  Resume checkpoint not found: {cfg.resume_from}")
+            print(f"\n  Resume checkpoint not found: {cfg.resume_from}")
             print("   Starting from scratch")
             cfg.resume_from = None
     else:
         # Check for last.pth in checkpoint dir
         last_checkpoint = os.path.join(cfg.checkpoint_dir, "last.pth")
         if os.path.exists(last_checkpoint):
-            print(f"\n🔄 Found existing checkpoint: {last_checkpoint}")
+            print(f"\n Found existing checkpoint: {last_checkpoint}")
             response = input("   Resume from this checkpoint? (y/n): ")
             if response.lower() == "y":
                 cfg.resume_from = last_checkpoint
@@ -892,7 +1035,7 @@ if __name__ == "__main__":
     )
 
     print("\n" + "=" * 80)
-    print("🎉 ALL DONE!")
+    print(" ALL DONE!")
     print("=" * 80)
     print(f"\nCheckpoints saved in: {cfg.checkpoint_dir}/")
     print(f"Visualizations saved in: {cfg.val_viz_dir}/")

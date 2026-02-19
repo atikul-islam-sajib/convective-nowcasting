@@ -49,3 +49,23 @@ def compute_psnr_mm(pred_log, target_log, mask, eps=1e-3, max_val=400.0):
     psnr = 20 * torch.log10(torch.tensor(max_val, device=mse.device) / torch.sqrt(mse))
 
     return psnr.item()
+
+
+def compute_metrics(pred, target, mask):
+    pred_single = pred[:, 0]
+    target_single = target[:, 0]
+    mask_single = mask[:, 0].bool()
+
+    if mask_single.any():
+        mae = torch.abs(pred_single[mask_single] - target_single[mask_single]).mean()
+        rmse = torch.sqrt(
+            ((pred_single[mask_single] - target_single[mask_single]) ** 2).mean()
+        )
+    else:
+        mae = torch.abs(pred_single - target_single).mean()
+        rmse = torch.sqrt(((pred_single - target_single) ** 2).mean())
+
+    ssim = compute_ssim(pred, target, mask)
+    psnr = compute_psnr_mm(pred, target, mask, eps=1e-3, max_val=400.0)
+
+    return {"mae": mae.item(), "rmse": rmse.item(), "ssim": ssim, "psnr": psnr}
