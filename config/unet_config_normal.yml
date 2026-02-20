@@ -26,8 +26,8 @@ num_workers: 8
 gradient_accumulation_steps: 2        # Effective batch = batch_size * accumulation_steps
 
 # Optimizer 
-learning_rate: 1.0e-4                 # Base / initial LR (used by most schedulers)
-weight_decay: 1.0e-4                  # For Adam/AdamW this weight_decay used
+learning_rate: 0.0001                 # Base / initial LR (used by most schedulers)
+weight_decay: 0.0001                  # For Adam/AdamW this weight_decay used
 beta1: 0.9                            # For Adam/AdamW this beta1, beta2 used
 beta2: 0.999                          # For Adam/AdamW this beta1, beta2 used
 grad_clip: 1.0
@@ -47,15 +47,15 @@ weight_value_3: 10.0                 # For MAE, it would be large
 scheduler_type: "onecycle" # Options: onecycle | cosine_restart | reduce_plateau
 
 # OneCycleLR
-max_lr: 5.0e-4
+max_lr: 0.0005
 pct_start: 0.3                        # Fraction of training spent increasing LR
 div_factor: 25.0                      # Initial LR = max_lr / div_factor
-final_div_factor: 1.0e4               # Final LR = max_lr / (div_factor * final_div_factor)
+final_div_factor: 10000               # Final LR = max_lr / (div_factor * final_div_factor)
 
 # CosineAnnealingWarmRestarts
 T_0: 10                               # Number of epochs for first restart
 T_mult: 2                             # Multiply T_0 by this after each restart
-min_lr: 1.0e-6                        # Minimum LR (used by cosine_restart & reduce_plateau)
+min_lr: 0.000001                      # Minimum LR (used by cosine_restart & reduce_plateau)
 
 # ReduceLROnPlateau
 scheduler_factor: 0.5                 # Reduce LR by this factor
@@ -66,7 +66,7 @@ use_mixed_precision: true
 
 # Early Stopping
 patience: 15                          # Stop after N epochs with no improvement
-min_delta: 1.0e-5                     # Minimum improvement to count
+min_delta: 0.00001                    # Minimum improvement to count
 
 # Visualization
 viz_every_n_epochs: 1                 # How often to save visualization images

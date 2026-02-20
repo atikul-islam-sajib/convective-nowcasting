@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=nowcasting
 #SBATCH --partition=gpu
-#SBATCH --time=3-00:00:00
+#SBATCH --time=3-00:00:00     # HHI allows us to train the model only 3 days at a time
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
@@ -16,4 +16,4 @@ conda activate weather
 cd ~/projects/weather-learning
 export PYTHONPATH=$PWD/src
 
-python -u train_convlstm_normal.py
+python -u train_unet_normal.py

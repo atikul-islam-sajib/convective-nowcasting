@@ -11,7 +11,7 @@ Run this ONCE before training to create:
 - metadata/test_sampled.csv
 
 Usage:
-    python presample_all_metadata.py
+    python presample_quantile_metadata.py
 
 Then run your training script with USE_PRESAMPLED_ALL=True
 """
@@ -79,7 +79,7 @@ def presample_metadata(
     n_bad = (~valid).sum()
 
     if n_bad > 0:
-        print(f"⚠️  Removing {n_bad} samples with invalid p99(x)")
+        print(f"  Removing {n_bad} samples with invalid p99(x)")
 
     df = df[valid].reset_index(drop=True)
     s = s[valid]
@@ -176,8 +176,8 @@ def presample_all_splits(
     print("=" * 80)
     for split_name, count in results.items():
         print(f"  {split_name:5s}: {count:,} samples (sampled)")
-    print("\n✓ All splits pre-sampled successfully!")
-    print("✓ Ready to train with USE_PRESAMPLED_ALL=True")
+    print("\n All splits pre-sampled successfully!")
+    print(" Ready to train with USE_PRESAMPLED_ALL=True")
     print("=" * 80 + "\n")
 
 
