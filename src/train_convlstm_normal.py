@@ -40,6 +40,7 @@ import os
 import json
 import time
 import yaml
+import math
 import torch
 import numpy as np
 import torch.nn as nn
@@ -580,7 +581,9 @@ def train(
     scheduler = None
 
     if cfg.scheduler_type == "onecycle":
-        steps_per_epoch = len(train_loader) // cfg.gradient_accumulation_steps
+        steps_per_epoch = math.ceil(
+            len(train_loader) / cfg.gradient_accumulation_steps
+        )
         total_steps = steps_per_epoch * cfg.num_epochs
 
         scheduler = OneCycleLR(

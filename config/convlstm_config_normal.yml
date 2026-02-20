@@ -1,6 +1,10 @@
-# ConvLSTM Normal Training Configuration - Direct 60min Training
-# Edit values here, no need to touch Python code!
-# This works better for 45/30 or 30/15min data
+###########################################################################
+#      ConvLSTM Normal Training Configuration - Direct 60min Training
+#           Edit values here, no need to touch Python code!
+#             This works better for 45/30 or 30/15min data
+#       This works better even 60 mins past and 15/30 mins future
+#               Don't work better when t-60 and t+60.  
+##########################################################################
 
 # Data paths
 metadata_train: "metadata/train_sampled.csv"
@@ -39,17 +43,23 @@ scheduler_factor: 0.5
 loss_type: "hybrid_weighted_mae"  # Options: masked_mse, hybrid_weighted_mse, hybrid_weighted_mae
 
 # Loss weights
-weight_threshold_1: 15.0
-weight_value_1: 2.0
-weight_threshold_2: 50.0
-weight_value_2: 5.0
-weight_threshold_3: 100.0
-weight_value_3: 7.0
+weight_threshold_1: 15.0        # This would be equivalent to operational threshold
+weight_value_1: 2.0             # For MAE - it would be higher
+weight_threshold_2: 50.0        # This would be greater to operational threshold  (+ 20)
+weight_value_2: 5.0             # For MAE - it would be higher
+weight_threshold_3: 100.0       # This would be greater to manual_extreme_threshold or PIck the value from extreme_threshold_json * 12
+weight_value_3: 7.0             # For MAE - it would be higher
 
-# Thresholds
-operational_threshold: 15.0
-storm_threshold_json: "metadata/storm_threshold.json"
-use_extreme_from_data: false
+#################################################################
+#                       Thresholds
+#     If the user did not define the extreme threshold,
+#   then the extreme threshold will be calculated from the data
+#      using percentile approach(95 percentile by default)
+#################################################################
+
+operational_threshold: 15.0                            # Took the value from DWD website, but tuning is required
+storm_threshold_json: "metadata/storm_threshold.json"  # Stored in the metadata folder in mm/5min unit.
+use_extreme_from_data: false                           # Set it True -> if you want to use extreme values from data
 manual_extreme_threshold: 50.0
 
 # Early stopping
@@ -57,21 +67,26 @@ patience: 35
 min_delta: 0.00001
 
 # Visualization
-num_viz_samples: 8
+num_viz_samples: 8           # 8 images would be shown when the epoch >=  num_viz_samples
 max_batches_to_search: 20
 viz_every_n_epochs: 1
 
-# Storm detection
+######################################################################
+#   Storm detection: How much physical area it actually covered
+#   If the area is too small, it is not a storm, noise actually
+#  If the area is too large, it is not a storm, it is a big blob
+#           If the area is in between, it is a storm
+######################################################################
 storm_min_pixels: 1
 morphology_disk_size: 4
-storm_min_area_km2: 50.0
-storm_max_area_km2: 150.0
+storm_min_area_km2: 50.0   # Noelia suggested me not to use this, set 0.0 will be fine
+storm_max_area_km2: 150.0  # Noelia suggested me not to use this, set 0.0 will be fine
 pixel_area_km2: 1.0
 
 # Output directories
-checkpoint_dir: "Checkpoints_Normal"
-train_viz_dir: "TrainViz_Normal"
-val_viz_dir: "ValViz_Normal"
+checkpoint_dir: "experiments/convlstm_30_15/checkpoints_convlstm"    # 30 means past 30 mins, 15 means future 15 mins
+train_viz_dir : "experiments/convlstm_30_15/trainviz_convlstm"       # 30 means past 30 mins, 15 means future 15 mins
+val_viz_dir   : "experiments/convlstm_30_15/valviz_convlstm"         # 30 means past 30 mins, 15 means future 15 mins
 
 # Resume training (set to checkpoint path or null)
 resume_from: null
