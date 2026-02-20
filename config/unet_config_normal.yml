@@ -1,0 +1,100 @@
+# ==============================================================================
+# UNet Normal Training Configuration
+# config/unet_config_normal.yml
+# ==============================================================================
+
+# Paths
+main_config: "config/config.yml"
+metadata_train: "metadata/train_sampled.csv"
+metadata_val: "metadata/val_sampled.csv"
+
+# Output Directories
+checkpoint_dir: "experiments/unet_30_15/checkpoints_unet"
+train_viz_dir : "experiments/unet_30_15/trainviz_unet"
+val_viz_dir   : "experiments/unet_30_15/valviz_unet"
+
+# Resume
+resume_from: null                     # e.g. "checkpoints/unet_normal/last.pth"
+
+# Model
+bilinear: true                        # Use bilinear upsampling (vs ConvTranspose2d)
+
+# Training
+num_epochs: 3                         # Define num_epochs to train the model
+batch_size: 16                        # Batch size for training, e.g, 32, 64 if GPU memory allows
+num_workers: 8
+gradient_accumulation_steps: 2        # Effective batch = batch_size * accumulation_steps
+
+# Optimizer 
+learning_rate: 1.0e-4                 # Base / initial LR (used by most schedulers)
+weight_decay: 1.0e-4                  # For Adam/AdamW this weight_decay used
+beta1: 0.9                            # For Adam/AdamW this beta1, beta2 used
+beta2: 0.999                          # For Adam/AdamW this beta1, beta2 used
+grad_clip: 1.0
+
+# Loss Function                                   
+loss_type: "hybrid_weighted_mse"     # Options: masked_mse | hybrid_weighted_mse | hybrid_weighted_mae
+
+# Hybrid loss weight thresholds (mm/h, in model-space via SoftLogTransform)
+weight_threshold_1: 10.0             # Wise of use similar to opearations.threshold
+weight_value_1: 2.0                  # For MAE, it would be large
+weight_threshold_2: 30.0             # Wise of use similar to opearations.threshold + 20/30
+weight_value_2: 5.0                  # For MAE, it would be large
+weight_threshold_3: 50.0             # Wise of use similar to storm_threshold_json * 12 -> mm/hours
+weight_value_3: 10.0                 # For MAE, it would be large  
+
+# Learning Rate Scheduler
+scheduler_type: "onecycle" # Options: onecycle | cosine_restart | reduce_plateau
+
+# OneCycleLR
+max_lr: 5.0e-4
+pct_start: 0.3                        # Fraction of training spent increasing LR
+div_factor: 25.0                      # Initial LR = max_lr / div_factor
+final_div_factor: 1.0e4               # Final LR = max_lr / (div_factor * final_div_factor)
+
+# CosineAnnealingWarmRestarts
+T_0: 10                               # Number of epochs for first restart
+T_mult: 2                             # Multiply T_0 by this after each restart
+min_lr: 1.0e-6                        # Minimum LR (used by cosine_restart & reduce_plateau)
+
+# ReduceLROnPlateau
+scheduler_factor: 0.5                 # Reduce LR by this factor
+scheduler_patience: 3                 # Epochs with no improvement before reducing
+
+# Mixed Precision
+use_mixed_precision: true
+
+# Early Stopping
+patience: 15                          # Stop after N epochs with no improvement
+min_delta: 1.0e-5                     # Minimum improvement to count
+
+# Visualization
+viz_every_n_epochs: 1                 # How often to save visualization images
+num_viz_samples: 8                    # Number of samples to visualize, best to easy training 
+max_batches_to_search: 20             # Search this many batches for best storm batch
+
+#################################################################
+#                       Thresholds
+#     If the user did not define the extreme threshold,
+#   then the extreme threshold will be calculated from the data
+#      using percentile approach(95 percentile by default)
+#################################################################
+
+operational_threshold: 15.0                            # Took the value from DWD website, but tuning is required
+storm_threshold_json: "metadata/storm_threshold.json"  # Stored in the metadata folder in mm/5min unit.
+use_extreme_from_data: false                           # Set it True -> if you want to use extreme values from data
+manual_extreme_threshold: 50.0
+
+
+
+######################################################################
+#   Storm detection: How much physical area it actually covered
+#   If the area is too small, it is not a storm, noise actually
+#  If the area is too large, it is not a storm, it is a big blob
+#           If the area is in between, it is a storm
+######################################################################
+storm_min_pixels: 1
+morphology_disk_size: 4
+storm_min_area_km2: 50.0              # Noelia suggested me not to use, set 0.0 would be fine
+storm_max_area_km2: 300.0             # Noelia suggested me not to use, set 0.0 would be fine
+pixel_area_km2: 1.0

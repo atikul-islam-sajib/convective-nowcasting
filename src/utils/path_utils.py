@@ -25,7 +25,7 @@ def satellite_file_paths(root_directory, timestamp, channel_number):
 
 def radar_file_path(root_directory, timestamp):
     """
-    ✅ CORRECT: Matches real radar files like:
+    CORRECT: Matches real radar files like:
     radar_de/2201/01/220101_1550.npy
     (WITH /DD/ subdirectory!)
     """

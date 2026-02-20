@@ -60,7 +60,7 @@ from utils.io_utils import load_satellite_channel, load_radar_frame
 
 
 
-# ✅ VERIFIED CONFIGURATION
+# VERIFIED CONFIGURATION
 CHANNEL_STATS = {
     7: {'mean': 31.43, 'std': 16.41, 'clip_min': 9.00, 'clip_max': 63.63},
     9: {'mean': 56.38, 'std': 25.80, 'clip_min': 19.89, 'clip_max': 103.75},
