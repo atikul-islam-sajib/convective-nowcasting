@@ -8,7 +8,7 @@ For each sample, the dataset:
     1. Computes temporal satellite and radar history timestamps.
     2. Validates availability of all required files.
     3. Loads satellite channels and radar history.
-    4. Applies clipping and normalization.
+    4. Applies normalization (no clipping on satellite — full dynamic range preserved).
     5. Applies spatial resizing/interpolation.
     6. Applies logarithmic radar transformation.
     7. Handles NaN/Inf values robustly.
@@ -43,6 +43,7 @@ Typical Usage
 
 
 import os
+import json
 import torch
 import pickle
 import numpy as np
@@ -59,12 +60,24 @@ from utils.time_utils import get_satellite_history_and_radar_target
 from utils.io_utils import load_satellite_channel, load_radar_frame
 
 
+# Load CHANNEL_STATS from JSON (computed by compute_channel_stats.py)
+# JSON keys are strings, so we convert back to int for channel lookup.
+_STATS_PATH = os.path.join(os.path.dirname(__file__), "../../metadata/channel_stats.json")
 
-# VERIFIED CONFIGURATION
-CHANNEL_STATS = {
-    7: {'mean': 31.43, 'std': 16.41, 'clip_min': 9.00, 'clip_max': 63.63},
-    9: {'mean': 56.38, 'std': 25.80, 'clip_min': 19.89, 'clip_max': 103.75},
-}
+def _load_channel_stats(path: str) -> dict:
+    """Load channel mean/std from JSON produced by compute_channel_stats.py."""
+    abs_path = os.path.abspath(path)
+    if not os.path.exists(abs_path):
+        raise FileNotFoundError(
+            f"channel_stats.json not found at: {abs_path}\n"
+            f"Run compute_channel_stats.py first to generate it."
+        )
+    with open(abs_path, "r") as f:
+        raw = json.load(f)
+    # JSON keys are strings — convert to int
+    return {int(k): v for k, v in raw.items()}
+
+CHANNEL_STATS = _load_channel_stats(_STATS_PATH)
 
 RADAR_CONFIG = {
     'clip_max': 400,
@@ -303,6 +316,8 @@ class SatelliteRadarDataset(Dataset):
     - Debug mode prints detailed file paths.
     - All NaNs/Inf values in input are replaced with zero.
     - Target NaNs are optionally masked.
+    - Satellite data is NOT clipped — full dynamic range is preserved
+      for convective storm detection (cold cloud tops matter).
     """
 
     def __init__(
@@ -329,8 +344,7 @@ class SatelliteRadarDataset(Dataset):
         print(f"Metadata: {metadata_csv}")
         print(f"Satellite Configuration:")
         for ch in self.config.satellite.channels:
-            print(f"  Ch{ch}: clip=[{CHANNEL_STATS[ch]['clip_min']:.2f}, {CHANNEL_STATS[ch]['clip_max']:.2f}], "
-                  f"mean={CHANNEL_STATS[ch]['mean']:.2f}, std={CHANNEL_STATS[ch]['std']:.2f}")
+            print(f"  Ch{ch}: mean={CHANNEL_STATS[ch]['mean']:.2f}, std={CHANNEL_STATS[ch]['std']:.2f} (no clipping)")
         print(f"Radar Configuration:")
         print(f"  Clip: [0, {RADAR_CONFIG['clip_max']:.2f}] mm/hr")
         print(f"  Transform: log10(x + 0.001)")
@@ -477,22 +491,11 @@ class SatelliteRadarDataset(Dataset):
                 self.config.satellite.fill_value,
             )
 
-            sat_array = clip(
-                sat_array,
-                CHANNEL_STATS[channel_number]['clip_min'],
-                CHANNEL_STATS[channel_number]['clip_max'],
-            )
-
+            # No clipping — full dynamic range preserved for convective detection
             if self.config.transform.satellite.normalization == "zscore":
                 channel_mean = CHANNEL_STATS[channel_number]['mean']
                 channel_std = CHANNEL_STATS[channel_number]['std']
                 sat_array = zscore(sat_array, channel_mean, channel_std)
-            elif self.config.transform.satellite.normalization == "minmax":
-                sat_array = minmax(
-                    sat_array,
-                    CHANNEL_STATS[channel_number]['clip_min'],
-                    CHANNEL_STATS[channel_number]['clip_max'],
-                )
 
             sat_array = apply_spatial(
                 sat_array,
@@ -552,4 +555,4 @@ class SatelliteRadarDataset(Dataset):
         return input_tensor, target_tensor, mask_tensor
      else:
         target_tensor = torch.from_numpy(radar_target[None]).float()
-        return input_tensor, target_tensor 
+        return input_tensor, target_tensor

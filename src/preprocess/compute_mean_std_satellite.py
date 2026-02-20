@@ -227,7 +227,7 @@ def main():
     with open(args.out_json, "w") as f:
         json.dump(channel_stats, f, indent=4)
 
-    print(f"  Saved → {args.out_json}")
+    print(f"  Saved: {args.out_json}")
     print("  Done!\n")
 
 
