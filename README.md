@@ -16,6 +16,8 @@ Already a pro? Just edit this README.md and make it your own. Want to make it ea
 ```
 cd existing_repo
 git remote add origin https://gitlab.cc-asp.fraunhofer.de/sajib/convective-nowcasting.git
+=======
+git remote add origin https://gitlab.hhi.fraunhofer.de/sajib/convective-nowcasting.git
 git branch -M main
 git push -uf origin main
 ```
@@ -23,6 +25,8 @@ git push -uf origin main
 ## Integrate with your tools
 
 * [Set up project integrations](https://gitlab.cc-asp.fraunhofer.de/sajib/convective-nowcasting/-/settings/integrations)
+=======
+* [Set up project integrations](https://gitlab.hhi.fraunhofer.de/sajib/convective-nowcasting/-/settings/integrations)
 
 ## Collaborate with your team
 
