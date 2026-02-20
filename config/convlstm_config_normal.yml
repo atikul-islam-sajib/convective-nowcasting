@@ -67,7 +67,7 @@ patience: 35
 min_delta: 0.00001
 
 # Visualization
-num_viz_samples: 8           # 8 images would be shown when the epoch >=  num_viz_samples
+num_viz_samples: 2           # 8 images would be shown when the epoch >=  num_viz_samples
 max_batches_to_search: 20
 viz_every_n_epochs: 1
 
