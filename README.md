@@ -272,23 +272,14 @@ usage.
 - Checkpoints, viz PNGs, and `mlruns/` are created at the repo root by
   each training script (not tracked in version control by default)
 
+
 ### Example outputs
 
-Storm-sample comparison figures and summary charts saved by
-`inference.py`, one set per input mode:
+Storm-sample comparison figures and summary charts saved by inference.py, side by side for each input mode:
 
-**Multimodal** — `artifacts/outputs/multimodal/`
+<table> <tr> <th>Multimodal</th> <th>Radar-only</th> </tr> <tr> <td><img src="artifacts/outputs/multimodal/sample_04_2024-06-30_0045.png" width="100%" alt="Multimodal storm sample comparison"></td> <td><img src="artifacts/outputs/radar/sample_04_2024-06-30_0130.png" width="100%" alt="Radar-only storm sample comparison"></td> </tr> <tr> <td><img src="artifacts/outputs/multimodal/table51_radar_chart(2).png" width="100%" alt="Multimodal summary radar chart"></td> <td><img src="artifacts/outputs/radar/table52_radar_chart.png" width="100%" alt="Radar-only summary radar chart"></td> </tr> </table>
 
-<img src="artifacts/outputs/multimodal/sample_04_2024-06-30_0045.png" width="100%" alt="Multimodal storm sample comparison"> <img src="artifacts/outputs/multimodal/table51_radar_chart(2).png" width="100%" alt="Multimodal summary radar chart">
-
-**Radar-only** — `artifacts/outputs/radar/`
-
-<img src="artifacts/outputs/radar/sample_04_2024-06-30_0130.png" width="100%" alt="Radar-only storm sample comparison"> <img src="artifacts/outputs/radar/table52_radar_chart.png" width="100%" alt="Radar-only summary radar chart">
-
-Both directories fill up automatically as you run `inference.py` for
-each mode — the filenames above are simply the ones already checked in
-as examples. `artifacts/outputs/non-DL/` holds the equivalent pySTEPS
-baseline comparisons.
+Both directories fill up automatically as you run inference.py for each mode — the filenames above are simply the ones already checked in as examples. artifacts/outputs/non-DL/ holds the equivalent pySTEPS baseline comparisons.
 
 ## License
 
