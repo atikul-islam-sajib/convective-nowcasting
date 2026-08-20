@@ -41,5 +41,3 @@ docker run --gpus all --shm-size=8g -v $(pwd):/workspace nowcast-radar \
        python train/radar/inference.py --num_samples 10
 ENTRYPOINT ["python"]
 CMD ["--version"]
-
-#478817

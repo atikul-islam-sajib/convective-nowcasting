@@ -53,7 +53,6 @@ MODELS = [
     {'key': 'convlstm',    'label': 'ConvLSTM',     'color': '#ff8844'},
     {'key': 'simvp',       'label': 'SimVP',         'color': '#44cc88'},
     {'key': 'earthformer', 'label': 'EarthFormer',  'color': '#cc44ff'},
-    
     {'key': 'vptr',        'label': 'VPTR',          'color': '#ff4488'},
     {'key': 'ensemble',    'label': 'Ensemble',      'color': '#ffffff'},
 ]
@@ -64,37 +63,31 @@ REAL_MODEL_KEYS = [m['key'] for m in MODELS if m['key'] != 'ensemble']
 
 class InferenceConfig:
 
-    
     out_dir      = 'INFERENCE_FULLIMAGE_COMPARISON'
     metadata_csv = 'metadata_patch/test_fullimage_summer.csv'
 
     detailed_metrics_csv = os.path.join(out_dir, 'dl_fullimage_metrics.csv')
     mean_metrics_csv      = os.path.join(out_dir, 'dl_fullimage_mean_metrics.csv')
 
-    
     radar_base = '/home/fe/sajib/scratch/weather-data/radar_de'
     sat_base   = '/home/fe/sajib/scratch/weather-data/satellite_de_regridded'
 
-    
     channels       = ['CH7', 'CH9']
     num_in_frames  = 5
     stride_minutes = 5
     horizons       = [15, 30, 45, 60]
 
-    
     smaat_checkpoint       = 'CHECKPOINTS_SMAATUNET_PATCH_1KM_SUMMER_2H_2015_to_2024_t15_to_t60/best_ets.pth'
     convlstm_checkpoint    = 'CHECKPOINTS_CONVLSTM_PATCH_1KM_SUMMER_2H_2015_to_2024_t15_to_t60/best_ets.pth'
     simvp_checkpoint       = 'CHECKPOINTS_SIMVP_PATCH_1KM_SUMMER_2H_2015_to_2024_t15_to_t60/best_ets.pth'
     earthformer_checkpoint = 'CHECKPOINTS_EARTHFORMER_PATCH_1KM_SUMMER_2H_2015_to_2024_t15_to_t60/best_ets.pth'
-    
     vptr_checkpoint        = 'CHECKPOINTS_VPTR_PATCH_1KM_SUMMER_2H_2015_to_2024_t15_to_t60/best_ets.pth'
     earthformer_config_yml = 'config/earthformer_nowcast.yaml'
-    
+
     smaat_kernels_per_layer = 2
     smaat_bilinear          = True
     smaat_reduction_ratio   = 16
 
-    
     hid_S        = 64
     hid_T        = 256
     N_S          = 4
@@ -102,10 +95,8 @@ class InferenceConfig:
     incep_ker    = [3, 5, 7, 11]
     simvp_groups = 8
 
-    
     unet_bilinear = True
 
-    
     vptr_feat_dim           = 192
     vptr_n_downsampling     = 3
     vptr_encH               = 32
@@ -119,13 +110,10 @@ class InferenceConfig:
     vptr_spatial_ffn_ratio  = 4
     vptr_rpe                = True
 
-    
     patch_size    = 256
     patch_overlap = 64
-    patch_blend   = 'cosine'   
+    patch_blend   = 'cosine'
 
-    
-    
     num_samples          = 5
 
     operational_thr      = 15.0
@@ -136,21 +124,15 @@ class InferenceConfig:
     storm_max_area_km2   = 10000.0
     pixel_area_km2       = 1.0
 
-    
-    
     show_storm_metrics = False
 
-    
     rain_threshold      = 0.1
     zerovalue_db        = -15.0
     psnr_data_range      = CLIP_MAX_MMH
     csi_threshold_mmh    = 15.0
     categorical_thresholds = [5.0, 15.0]
 
-    
-    
-    
-    ensemble_weights = {"smaat_unet": 1.0, "convlstm": 1.0, "simvp": 1.0, "earthformer": 1.0, "unet": 1.0, "vptr": 1.0}   
+    ensemble_weights = {"smaat_unet": 1.0, "convlstm": 1.0, "simvp": 1.0, "earthformer": 1.0, "unet": 1.0, "vptr": 1.0}
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -223,45 +205,32 @@ def compute_ets(pred, target, threshold):
 def compute_psnr(pred, target, data_range):
     mse = np.mean((pred - target) ** 2)
     if mse == 0:
-        return float("inf")
-    return 10.0 * np.log10((data_range ** 2) / mse)
+        return float('nan')
+    return 10.0 * np.log10(data_range ** 2 / mse)
 
 
 def compute_metrics(prediction, target, mask, cfg):
     valid = mask.astype(bool) & np.isfinite(prediction) & np.isfinite(target)
     if not np.any(valid):
         return None
-
-    active = valid & ((target >= cfg.rain_threshold) | (prediction >= cfg.rain_threshold))
-    MIN_ACTIVE_PIXELS = 100
-
-    if active.sum() < MIN_ACTIVE_PIXELS:
-        mae = mse = rmse = psnr = ssim = float("nan")
+    p = prediction[valid]
+    y = target[valid]
+    mae = np.mean(np.abs(p - y))
+    mse = np.mean((p - y) ** 2)
+    rmse = np.sqrt(mse)
+    psnr = compute_psnr(p, y, cfg.psnr_data_range)
+    if valid.sum() < 100:
+        ssim = float('nan')
     else:
-        p = prediction[active]
-        y = target[active]
-        mae = np.mean(np.abs(p - y))
-        mse = np.mean((p - y) ** 2)
-        rmse = np.sqrt(mse)
-        psnr = compute_psnr(p, y, cfg.psnr_data_range)
-
-        pred_db = rainrate_to_db(np.where(valid, prediction, 0.0), threshold=cfg.rain_threshold, zerovalue=cfg.zerovalue_db)
-        target_db = rainrate_to_db(np.where(valid, target, 0.0), threshold=cfg.rain_threshold, zerovalue=cfg.zerovalue_db)
-        db_range = 10.0 * np.log10(cfg.psnr_data_range) - cfg.zerovalue_db
-
-        _, ssim_map = structural_similarity(
-            target_db, pred_db, data_range=db_range,
-            gaussian_weights=True, sigma=1.5, use_sample_covariance=False, full=True,
-        )
-        ssim = float(ssim_map[active].mean())
-
-    result = {"MAE": float(mae), "MSE": float(mse), "RMSE": float(rmse), "PSNR": float(psnr), "SSIM": float(ssim)}
-    result["CSI"] = compute_csi(prediction[valid], target[valid], cfg.csi_threshold_mmh)
-
+        pred_ssim = np.where(valid, prediction, 0.0)
+        target_ssim = np.where(valid, target, 0.0)
+        _, ssim_map = structural_similarity(target_ssim, pred_ssim, data_range=cfg.psnr_data_range, gaussian_weights=True, sigma=1.5, use_sample_covariance=False, full=True)
+        ssim = float(ssim_map[valid].mean())
+    result = {'MAE': float(mae), 'MSE': float(mse), 'RMSE': float(rmse), 'PSNR': float(psnr), 'SSIM': float(ssim)}
+    result['CSI'] = compute_csi(p, y, cfg.csi_threshold_mmh)
     for threshold in cfg.categorical_thresholds:
         suffix = str(int(threshold))
-        result[f"ETS@{suffix}"] = compute_ets(prediction[valid], target[valid], threshold)
-
+        result[f'ETS@{suffix}'] = compute_ets(p, y, threshold)
     return result
 
 
@@ -272,7 +241,7 @@ def _cosine_window_1d(size, device):
 
 def _make_blend_window(patch_size, device):
     w1d = _cosine_window_1d(patch_size, device)
-    return w1d.unsqueeze(0) * w1d.unsqueeze(1)   
+    return w1d.unsqueeze(0) * w1d.unsqueeze(1)
 
 
 def _get_patch_starts(full_size, patch_size, overlap):
@@ -500,9 +469,9 @@ def _strip_dp(sd):
 
 
 def load_all_models(cfg):
-    n_ch  = len(cfg.channels) + 1   
-    n_hor = len(cfg.horizons)        
-    T     = cfg.num_in_frames        
+    n_ch  = len(cfg.channels) + 1
+    n_hor = len(cfg.horizons)
+    T     = cfg.num_in_frames
     models = {}
 
     ckpt = torch.load(cfg.smaat_checkpoint, map_location='cpu', weights_only=False)
@@ -532,13 +501,6 @@ def load_all_models(cfg):
                            n_horizons=n_hor, model_cfg=model_cfg)
     m.load_state_dict(_strip_dp(ckpt['model_state_dict']), strict=False)
     models['earthformer'] = m.to(cfg.device).eval()
-
-    
-    
-    
-    
-    
-    
 
     ckpt = torch.load(cfg.vptr_checkpoint, map_location='cpu', weights_only=False)
     m = VPTRWrapper(num_channels=n_ch, num_timesteps=T, n_horizons=n_hor,
@@ -686,9 +648,9 @@ def save_single_sample(sd, cfg, out_path, sample_idx):
     n_hor     = len(horizons)
     metrics_flag = getattr(cfg, 'show_storm_metrics', False)
 
-    N_IMG_COLS = n_hor * 2        
-    N_COLS     = N_IMG_COLS + 1   
-    n_rows     = len(MODELS)      
+    N_IMG_COLS = n_hor * 2
+    N_COLS     = N_IMG_COLS + 1
+    n_rows     = len(MODELS)
 
     FIG_W = 4.2 * N_IMG_COLS + 1.0
     FIG_H = 3.8 * n_rows
@@ -721,7 +683,6 @@ def save_single_sample(sd, cfg, out_path, sample_idx):
             valid = masks[h] > 0.5
             ts    = target_times[h]
 
-            
             gt_data = np.where(valid & (gt_mm[h] >= 0.1), gt_mm[h], np.nan)
             gt_op, gt_ext, n_gt_op, n_gt_ext = detect_storms_two_level(
                 np.where(valid, gt_mm[h], np.nan),
@@ -731,7 +692,6 @@ def save_single_sample(sd, cfg, out_path, sample_idx):
             gt_p99 = (np.percentile(gt_data[np.isfinite(gt_data)], 99)
                       if np.isfinite(gt_data).any() else 0.0)
 
-            
             col_gt = h_idx * 2
             ax_gt  = fig.add_subplot(gs[m_idx, col_gt])
             im = _render_image(ax_gt, gt_data, gt_op, gt_ext, n_gt_op, n_gt_ext)
@@ -743,7 +703,6 @@ def save_single_sample(sd, cfg, out_path, sample_idx):
             for sp in ax_gt.spines.values():
                 sp.set_edgecolor(mcolor); sp.set_linewidth(2.0)
 
-            
             col_pred = h_idx * 2 + 1
             ax_pred  = fig.add_subplot(gs[m_idx, col_pred])
 
@@ -774,7 +733,6 @@ def save_single_sample(sd, cfg, out_path, sample_idx):
             for sp in ax_pred.spines.values():
                 sp.set_edgecolor(mcolor); sp.set_linewidth(2.0)
 
-    
     if last_im is not None:
         cbar_ax = fig.add_subplot(gs[:, -1])
         cbar_ax.set_facecolor("#1a1a1a")
@@ -806,7 +764,6 @@ def save_single_sample(sd, cfg, out_path, sample_idx):
                              bbox=dict(boxstyle="round,pad=0.25",
                                        fc="#1a1a1a", ec=col, lw=0.8))
 
-    
     legend_patches = [
         mpatches.Patch(facecolor=m['color'], label=m['label']) for m in MODELS
     ] + [
@@ -873,37 +830,28 @@ def main():
     df     = pd.read_csv(cfg.metadata_csv)
     df_top = df.nlargest(cfg.num_samples, 'p99(x_seq)').reset_index(drop=True)
 
-
     metrics_flag = getattr(cfg, 'show_storm_metrics', False)
-    if cfg.patch_size is not None:
-        pass
-    else:
-        pass
 
-    
     models = load_all_models(cfg)
     n_hor  = len(cfg.horizons)
 
     all_metrics = []
 
-    
     for idx, row in df_top.iterrows():
 
         input_tensor, targets_np, masks_np, dt = load_full_sample(row, cfg)
 
-        
         gt_mm = {}
         masks = {}
         for h_idx, h in enumerate(cfg.horizons):
             gt_mm[h] = inverse_transform_np(targets_np[h_idx])
             masks[h] = masks_np[h_idx]
 
-        
         preds = {}
         for minfo in MODELS:
             mkey = minfo['key']
             if mkey == 'ensemble':
-                continue   
+                continue
 
             mlabel = minfo['label']
             pred_cpu = run_model(models[mkey], input_tensor, n_hor, cfg)
@@ -918,7 +866,6 @@ def main():
                 if masks[h].sum() > 0
             ]
 
-        
         preds['ensemble'] = compute_ensemble(preds, cfg.horizons, cfg.ensemble_weights)
         ens_maes = [
             f"t+{h}="
@@ -927,7 +874,6 @@ def main():
             if masks[h].sum() > 0
         ]
 
-        
         for minfo in MODELS:
             mkey   = minfo['key']
             mlabel = minfo['label']
@@ -939,7 +885,6 @@ def main():
                 row_result.update(metrics)
                 all_metrics.append(row_result)
 
-        
         sd = {
             'dt':    dt,
             'gt_mm': gt_mm,
@@ -948,12 +893,10 @@ def main():
             'p99':   float(row['p99(x_seq)']),
         }
 
-        
         out_fname = f"sample_{idx+1:02d}_{str(dt)[:10]}_{str(dt)[11:16].replace(':','')}.png"
         out_path  = os.path.join(cfg.out_dir, out_fname)
         save_single_sample(sd, cfg, out_path, idx)
 
-    
     if all_metrics:
         metrics_df = pd.DataFrame(all_metrics)
         metrics_df.to_csv(cfg.detailed_metrics_csv, index=False)

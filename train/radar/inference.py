@@ -53,7 +53,6 @@ MODELS = [
     {'key': 'convlstm',    'label': 'ConvLSTM',     'color': '#ff8844'},
     {'key': 'simvp',       'label': 'SimVP',         'color': '#44cc88'},
     {'key': 'earthformer', 'label': 'EarthFormer',  'color': '#cc44ff'},
-
     {'key': 'vptr',        'label': 'VPTR',          'color': '#ff4488'},
     {'key': 'ensemble',    'label': 'Ensemble',      'color': '#ffffff'},
 ]
@@ -64,34 +63,28 @@ REAL_MODEL_KEYS = [m['key'] for m in MODELS if m['key'] != 'ensemble']
 
 class InferenceConfig:
 
-
     out_dir      = 'INFERENCE_FULLIMAGE_COMPARISON_RADAR'
     metadata_csv = 'metadata_patch/test_fullimage_summer.csv'
 
     detailed_metrics_csv = os.path.join(out_dir, 'dl_fullimage_metrics.csv')
     mean_metrics_csv      = os.path.join(out_dir, 'dl_fullimage_mean_metrics.csv')
 
-
     radar_base = '/home/fe/sajib/scratch/weather-data/radar_de'
-
 
     num_in_frames  = 5
     stride_minutes = 5
     horizons       = [15, 30, 45, 60]
 
-
     smaat_checkpoint       = 'CHECKPOINTS_SMAATUNET_PATCH_1KM_SUMMER_2H_2015_to_2024_t15_to_t60_RADAR/best_ets.pth'
     convlstm_checkpoint    = 'CHECKPOINTS_CONVLSTM_PATCH_1KM_SUMMER_2H_2015_to_2024_t15_to_t60_RADAR/best_ets.pth'
     simvp_checkpoint       = 'CHECKPOINTS_SIMVP_PATCH_1KM_SUMMER_2H_2015_to_2024_t15_to_t60_RADAR/best_ets.pth'
     earthformer_checkpoint = 'CHECKPOINTS_EARTHFORMER_PATCH_1KM_SUMMER_2H_2015_to_2024_t15_to_t60_RADAR/best_ets.pth'
-
     vptr_checkpoint        = 'CHECKPOINTS_VPTR_PATCH_1KM_SUMMER_2H_2015_to_2024_t15_to_t60_RADAR/best_ets.pth'
     earthformer_config_yml = 'config/earthformer_nowcast.yaml'
 
     smaat_kernels_per_layer = 2
     smaat_bilinear          = True
     smaat_reduction_ratio   = 16
-
 
     hid_S        = 64
     hid_T        = 256
@@ -100,9 +93,7 @@ class InferenceConfig:
     incep_ker    = [3, 5, 7, 11]
     simvp_groups = 8
 
-
     unet_bilinear = True
-
 
     vptr_feat_dim           = 192
     vptr_n_downsampling     = 3
@@ -117,12 +108,9 @@ class InferenceConfig:
     vptr_spatial_ffn_ratio  = 4
     vptr_rpe                = True
 
-
     patch_size    = 256
     patch_overlap = 64
     patch_blend   = 'cosine'
-
-
 
     num_samples          = 5
 
@@ -134,17 +122,13 @@ class InferenceConfig:
     storm_max_area_km2   = 10000.0
     pixel_area_km2       = 1.0
 
-
     show_storm_metrics = False
-
 
     rain_threshold      = 0.1
     zerovalue_db        = -15.0
     psnr_data_range      = CLIP_MAX_MMH
-    csi_threshold_mmh    = [5.0, 15.0]
+    csi_threshold_mmh    = 15.0
     categorical_thresholds = [5.0, 15.0]
-
-
 
     ensemble_weights = {"smaat_unet": 1.0, "convlstm": 1.0, "simvp": 1.0, "earthformer": 1.0, "unet": 1.0, "vptr": 1.0}
 
@@ -214,45 +198,32 @@ def compute_ets(pred, target, threshold):
 def compute_psnr(pred, target, data_range):
     mse = np.mean((pred - target) ** 2)
     if mse == 0:
-        return float("inf")
-    return 10.0 * np.log10((data_range ** 2) / mse)
+        return float('nan')
+    return 10.0 * np.log10(data_range ** 2 / mse)
 
 
 def compute_metrics(prediction, target, mask, cfg):
     valid = mask.astype(bool) & np.isfinite(prediction) & np.isfinite(target)
     if not np.any(valid):
         return None
-
-    active = valid & ((target >= cfg.rain_threshold) | (prediction >= cfg.rain_threshold))
-    MIN_ACTIVE_PIXELS = 100
-
-    if active.sum() < MIN_ACTIVE_PIXELS:
-        mae = mse = rmse = psnr = ssim = float("nan")
+    p = prediction[valid]
+    y = target[valid]
+    mae = np.mean(np.abs(p - y))
+    mse = np.mean((p - y) ** 2)
+    rmse = np.sqrt(mse)
+    psnr = compute_psnr(p, y, cfg.psnr_data_range)
+    if valid.sum() < 100:
+        ssim = float('nan')
     else:
-        p = prediction[active]
-        y = target[active]
-        mae = np.mean(np.abs(p - y))
-        mse = np.mean((p - y) ** 2)
-        rmse = np.sqrt(mse)
-        psnr = compute_psnr(p, y, cfg.psnr_data_range)
-
-        pred_db = rainrate_to_db(np.where(valid, prediction, 0.0), threshold=cfg.rain_threshold, zerovalue=cfg.zerovalue_db)
-        target_db = rainrate_to_db(np.where(valid, target, 0.0), threshold=cfg.rain_threshold, zerovalue=cfg.zerovalue_db)
-        db_range = 10.0 * np.log10(cfg.psnr_data_range) - cfg.zerovalue_db
-
-        _, ssim_map = structural_similarity(
-            target_db, pred_db, data_range=db_range,
-            gaussian_weights=True, sigma=1.5, use_sample_covariance=False, full=True,
-        )
-        ssim = float(ssim_map[active].mean())
-
-    result = {"MAE": float(mae), "MSE": float(mse), "RMSE": float(rmse), "PSNR": float(psnr), "SSIM": float(ssim)}
-    result["CSI"] = compute_csi(prediction[valid], target[valid], cfg.csi_threshold_mmh)
-
+        pred_ssim = np.where(valid, prediction, 0.0)
+        target_ssim = np.where(valid, target, 0.0)
+        _, ssim_map = structural_similarity(target_ssim, pred_ssim, data_range=cfg.psnr_data_range, gaussian_weights=True, sigma=1.5, use_sample_covariance=False, full=True)
+        ssim = float(ssim_map[valid].mean())
+    result = {'MAE': float(mae), 'MSE': float(mse), 'RMSE': float(rmse), 'PSNR': float(psnr), 'SSIM': float(ssim)}
+    result['CSI'] = compute_csi(p, y, cfg.csi_threshold_mmh)
     for threshold in cfg.categorical_thresholds:
         suffix = str(int(threshold))
-        result[f"ETS@{suffix}"] = compute_ets(prediction[valid], target[valid], threshold)
-
+        result[f'ETS@{suffix}'] = compute_ets(p, y, threshold)
     return result
 
 
@@ -837,12 +808,7 @@ def main():
     df     = pd.read_csv(cfg.metadata_csv)
     df_top = df.nlargest(cfg.num_samples, 'p99(x_seq)').reset_index(drop=True)
 
-
     metrics_flag = getattr(cfg, 'show_storm_metrics', False)
-    if cfg.patch_size is not None:
-        pass
-    else:
-        pass
 
     models = load_all_models(cfg)
     n_hor  = len(cfg.horizons)
