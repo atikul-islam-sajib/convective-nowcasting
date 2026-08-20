@@ -1,0 +1,18 @@
+#!/bin/bash
+#SBATCH --job-name=prep-06-presample-thr
+#SBATCH --partition=cpu
+#SBATCH --time=1-00:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=64G
+#SBATCH --output=logs/%x-%j.out
+#SBATCH --error=logs/%x-%j.err
+ 
+source ~/miniconda3/etc/profile.d/conda.sh
+conda activate weather
+cd /home/sajib/Desktop/convective-nowcasting
+ 
+export PYTHONPATH=$PWD:$PWD/src
+ 
+python -u src/preprocess/compute_presample_thresholds.py

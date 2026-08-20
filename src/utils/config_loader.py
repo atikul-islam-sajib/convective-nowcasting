@@ -1,8 +1,7 @@
 import yaml
+from dataclasses import dataclass
 from typing import List
 from datetime import datetime
-from dataclasses import dataclass
-
 
 
 @dataclass
@@ -162,3 +161,4 @@ def load_config(path: str) -> Config:
             mask_nans=config_dict["data_policy"].get("mask_nans", True)  # ← Added this line
         ),
     )
+

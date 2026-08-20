@@ -1,0 +1,45 @@
+# ============================================================
+# Radar-only nowcasting image
+# ============================================================
+# Build from the repo root (the directory containing train/, src/,
+# datasets/, utils/, config/, metadata/, metadata_patch/).
+#
+#   docker build -t nowcast-radar -f Dockerfile.radar .
+#
+# Same runtime dependencies as the multimodal image — the radar-only
+# scripts don't need any extra libraries, they just skip the
+# satellite-loading code path. Kept as a separate image so the two
+# pipelines can be built, tagged, and deployed independently.
+FROM pytorch/pytorch:2.4.1-cuda12.1-cudnn9-runtime
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /workspace
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libgl1 \
+        libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt torchvision
+COPY . .
+
+docker run --gpus all --shm-size=8g -v $(pwd):/workspace nowcast-radar \
+       python train/radar/train_ConvLSTM.py
+docker run --gpus all --shm-size=8g -v $(pwd):/workspace nowcast-radar \
+       python train/radar/train_simVP.py
+docker run --gpus all --shm-size=8g -v $(pwd):/workspace nowcast-radar \
+       python train/radar/train_earthformer.py
+docker run --gpus all --shm-size=8g -v $(pwd):/workspace nowcast-radar \
+       python train/radar/train_VPTR.py
+docker run --gpus all --shm-size=8g -v $(pwd):/workspace nowcast-radar \
+       python train/radar/train_smaAt_UNet.py
+docker run --gpus all --shm-size=8g -v $(pwd):/workspace nowcast-radar \
+       python train/radar/inference.py --num_samples 10
+ENTRYPOINT ["python"]
+CMD ["--version"]
+
+#478817

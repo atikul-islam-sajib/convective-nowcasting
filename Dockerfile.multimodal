@@ -1,0 +1,43 @@
+# ============================================================
+# Multimodal (satellite + radar) nowcasting image
+# ============================================================
+# Build from the repo root (the directory containing train/, src/,
+# datasets/, utils/, config/, metadata/, metadata_patch/).
+#
+#   docker build -t nowcast-multimodal -f Dockerfile.multimodal .
+#
+# Base: official PyTorch image with CUDA 12.1 / cuDNN 9 already installed.
+# Adjust the CUDA tag below if it doesn't match your GPU driver.
+FROM pytorch/pytorch:2.4.1-cuda12.1-cudnn9-runtime
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /workspace
+
+# System deps needed by matplotlib/scikit-image at runtime
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libgl1 \
+        libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Python deps (torch/torchvision already present in the base image)
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt torchvision
+
+COPY . .
+docker run --gpus all --shm-size=8g -v $(pwd):/workspace nowcast-multimodal \
+       python train/multimodal/train_ConvLSTM.py
+docker run --gpus all --shm-size=8g -v $(pwd):/workspace nowcast-multimodal \
+       python train/multimodal/train_simVP.py
+docker run --gpus all --shm-size=8g -v $(pwd):/workspace nowcast-multimodal \
+       python train/multimodal/train_earthformer.py
+docker run --gpus all --shm-size=8g -v $(pwd):/workspace nowcast-multimodal \
+       python train/multimodal/train_VPTR.py
+docker run --gpus all --shm-size=8g -v $(pwd):/workspace nowcast-multimodal \
+       python train/multimodal/train_smaAt_UNet.py
+docker run --gpus all --shm-size=8g -v $(pwd):/workspace nowcast-multimodal \
+       python train/multimodal/inference.py --num_samples 10
+ENTRYPOINT ["python"]
+CMD ["--version"]

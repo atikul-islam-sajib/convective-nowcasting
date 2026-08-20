@@ -1,0 +1,72 @@
+# EarthFormer config for radar nowcasting
+# Tuned for 256x256 patches, 4 input timesteps (20min @ 5min cadence),
+# 3 channels per step (CH7 + CH9 + radar), predicting t+15 and t+30.
+# Do NOT use the pretrained SEVIR config -- that is 384x384 with 1 channel.
+
+model:
+  input_shape:  [4, 256, 256, 3]   # [T, H, W, C_in]  4 timesteps x 3 channels
+  target_shape: [2, 256, 256, 1]   # [T, H, W, C_out] 2 horizons, radar only
+
+  base_units:  64
+  scale_alpha: 1.0
+
+  enc_depth: [1, 1]
+  dec_depth: [1, 1]
+
+  enc_use_inter_ffn:          true
+  dec_use_inter_ffn:          true
+  dec_hierarchical_pos_embed: true
+
+  downsample:      2
+  downsample_type: "patch_merge"
+  upsample_type:   "upsample"
+
+  # attention patterns
+  self_pattern:            "axial"
+  cross_self_pattern:      "axial"
+  cross_pattern:           "cross_1x1"
+  dec_cross_last_n_frames: null
+
+  num_heads: 4
+  attn_drop: 0.1
+  proj_drop: 0.1
+  ffn_drop:  0.1
+
+  # global vectors
+  num_global_vectors:     8
+  use_dec_self_global:    true
+  dec_self_update_global: true
+  use_dec_cross_global:   true
+  use_global_vector_ffn:  true
+  use_global_self_attn:   false
+  separate_global_qkv:    false
+  global_dim_ratio:       1
+
+  # misc
+  ffn_activation:           "gelu"
+  gated_ffn:                false
+  norm_layer:               "layer_norm"
+  padding_type:             "zeros"
+  pos_embed_type:           "t+hw"       # "t+h+w" is SEVIR default -- use "t+hw" here
+  use_relative_pos:         true
+  self_attn_use_final_proj: true
+  dec_use_first_self_attn:  false
+  z_init_method:            "zeros"
+  checkpoint_level:         2            # gradient checkpointing -- saves VRAM on A100
+
+  # initial downsample -- tuned for 256px (NOT 384px)
+  # 256 -> 128 -> 64 -> 32  (all clean powers of 2)
+  # SEVIR uses [3,2,2] because 384/3=128 -- do NOT copy that here
+  initial_downsample_type:                      "stack_conv"
+  initial_downsample_activation:               "leaky"
+  initial_downsample_stack_conv_num_layers:     3
+  initial_downsample_stack_conv_dim_list:       [4, 16, 64]   # ends at base_units=64
+  initial_downsample_stack_conv_downscale_list: [2, 2, 2]     # 256->128->64->32
+  initial_downsample_stack_conv_num_conv_list:  [2, 2, 2]
+
+  # initialization
+  attn_linear_init_mode:    "0"
+  ffn_linear_init_mode:     "0"
+  conv_init_mode:           "0"
+  down_up_linear_init_mode: "0"
+  norm_init_mode:           "0"

@@ -9,12 +9,8 @@ def is_valid_sample(
     radar_time,
     channel_numbers,
     check_radar_history=True,
-    debug=False,  # ADD DEBUG PARAMETER
+    debug=False, 
 ):
-    """
-    A sample is valid if all required files exist
-    """
-    # Check satellite history
     for channel_number in channel_numbers:
         for timestamp in satellite_times:
             numpy_path, numpy_zip_path = satellite_file_paths(
@@ -38,7 +34,6 @@ def is_valid_sample(
                     print(f"   Checked: {numpy_path}")
                 return False
     
-    # Check radar history
     if check_radar_history:
         for timestamp in satellite_times:
             radar_hist_path = radar_file_path(radar_root, timestamp)
@@ -48,7 +43,6 @@ def is_valid_sample(
                     print(f"   Checked: {radar_hist_path}")
                 return False
     
-    # Check radar target
     radar_path = radar_file_path(radar_root, radar_time)
     if not os.path.exists(radar_path):
         if debug:

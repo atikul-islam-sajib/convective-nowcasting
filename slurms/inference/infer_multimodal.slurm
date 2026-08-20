@@ -1,0 +1,19 @@
+#!/bin/bash
+#SBATCH --job-name=infer-multimodal
+#SBATCH --partition=gpu
+#SBATCH --time=04:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=16
+#SBATCH --gres=gpu:1
+#SBATCH --mem=128G
+#SBATCH --output=logs/%x-%j.out
+#SBATCH --error=logs/%x-%j.err
+ 
+source ~/miniconda3/etc/profile.d/conda.sh
+conda activate weather
+cd /home/sajib/Desktop/convective-nowcasting
+ 
+export PYTHONPATH=$PWD:$PWD/src
+ 
+python -u train/multimodal/inference.py

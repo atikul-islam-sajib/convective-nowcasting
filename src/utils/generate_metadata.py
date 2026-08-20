@@ -14,10 +14,6 @@ from utils.metadata_utils import compute_metadata
 from utils.metadata_writer import write_metadata_csv
 
 
-# ============================================================
-# WORKER (FOR MULTIPROCESSING)
-# ============================================================
-
 def _process_one_timestamp(args):
 
     current_time, split_name, config = args
@@ -29,7 +25,6 @@ def _process_one_timestamp(args):
         config.temporal.radar_lead_minutes,
     )
 
-    # Fast availability check
     if not is_valid_sample(
         config.paths.satellite_root,
         config.paths.radar_root,
@@ -49,17 +44,13 @@ def _process_one_timestamp(args):
     except Exception:
         return None
 
-    # Preprocess radar
     radar = clip(radar, 0.0, config.transform.radar.clip_max)
 
-   # if config.transform.radar.log_transform:
-   #     radar = log_transform(radar)
-    # Statistics (p99, etc.)
     stats = compute_metadata(
         radar,
         config.metadata.percentiles,
     )
-    # NaN info
+
     valid_mask = np.isfinite(radar)
 
     nan_info = {
@@ -68,12 +59,6 @@ def _process_one_timestamp(args):
         "nan_ratio": float((~valid_mask).mean()),
         "all_nan": bool(valid_mask.sum() == 0),
     }
-
-    # Statistics (p99, etc.)
-   # stats = compute_metadata(
-   #     radar,
-   #     config.metadata.percentiles,
-   # )
 
     return {
         "split": split_name,
@@ -88,8 +73,6 @@ def _process_one_timestamp(args):
         **(stats if stats is not None else {}),
     }
 
-
-# MAIN FUNCTION
 
 def generate_metadata_and_split(
     config_path,
@@ -106,16 +89,11 @@ def generate_metadata_and_split(
     val_csv = os.path.join(out_dir, "val.csv")
     test_csv = os.path.join(out_dir, "test.csv")
 
-    # Skip if already exists
     if os.path.exists(all_csv) and not force:
         print("Metadata already exists – skipping generation")
         return
 
-    # Load config
     config = load_config(config_path)
-
-
-    # Prepare tasks
 
     tasks = []
 
@@ -135,8 +113,6 @@ def generate_metadata_and_split(
 
             current_time += timedelta(minutes=cadence)
 
-    # Parallel setup
-
     if num_workers is None:
         num_workers = max(1, cpu_count() - 1)
 
@@ -147,23 +123,16 @@ def generate_metadata_and_split(
     print(f"Total samples  : {len(tasks)}")
     print("=" * 80)
 
-    # Run multiprocessing
-
     with Pool(processes=num_workers) as pool:
         results = pool.map(_process_one_timestamp, tasks)
 
-    # Keep valid rows
     rows = [r for r in results if r is not None]
 
     print(f"Valid samples: {len(rows)}")
 
-    # Write ALL
-
     write_metadata_csv(rows, all_csv)
 
     print(f"Saved: {all_csv}")
-
-    # Split into train / val / test
 
     df = pd.read_csv(all_csv)
 
@@ -183,8 +152,6 @@ def generate_metadata_and_split(
     print("METADATA GENERATION COMPLETE")
     print("=" * 80)
 
-
-# CLI
 
 if __name__ == "__main__":
 

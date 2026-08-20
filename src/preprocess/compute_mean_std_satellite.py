@@ -1,27 +1,3 @@
-"""
-Compute CHANNEL_STATS (mean & std) from satellite data for z-score normalization.
-
-No clipping is applied — for convective storm prediction we want the full
-dynamic range of satellite brightness temperatures preserved, especially
-the cold cloud tops that indicate deep convection.
-
-Invalid pixels (NaN, Inf, fill_value, zero) are excluded before computing stats.
-
-Output example:
-    CHANNEL_STATS = {
-        7: {'mean': 29.96, 'std': 18.50},
-        9: {'mean': 53.18, 'std': 30.78},
-    }
-
-Usage
------
-    python compute_channel_stats.py \
-        --metadata   metadata/train_sampled.csv \
-        --config     config/config.yml \
-        --max_samples 100000 \
-        --num_workers 8
-"""
-
 import os
 import json
 import argparse
@@ -38,53 +14,21 @@ from utils.config_loader import load_config
 
 
 def load_one_satellite_file(root, timestamp, channel, nodata_value, fill_value):
-    """
-    Load a single satellite file and return valid pixel values only.
-
-    Excludes:
-        - NaN / Inf  (corrupted values)
-        - fill_value (nodata replacement)
-        - zeros      (invalid/masked pixels)
-    """
     numpy_path, numpy_zip_path = satellite_file_paths(root, timestamp, channel)
     try:
         arr = load_satellite_channel(
             numpy_path, numpy_zip_path, nodata_value, fill_value
         )
         arr = arr.astype(np.float32).ravel()
-        arr = arr[np.isfinite(arr)]  # drop NaN / Inf
-        arr = arr[arr != fill_value]  # drop fill_value pixels
-        arr = arr[arr > 0.0]  # drop zero / invalid pixels
+        arr = arr[np.isfinite(arr)]  
+        arr = arr[arr != fill_value] 
+        arr = arr[arr > 0.0]  
         return arr if len(arr) > 0 else None
     except Exception:
         return None
 
 
 def collect_pixels_for_channel(rows, channel, config, max_samples, num_workers):
-    """
-    Collect valid pixel values for one satellite channel across many files.
-
-    Only the most-recent timestep of each sample is used to avoid loading
-    redundant frames from the same scene.
-
-    Parameters
-    ----------
-    rows : list of pd.Series
-        Shuffled metadata rows.
-    channel : int
-        Satellite channel number.
-    config : object
-        Loaded YAML config.
-    max_samples : int
-        Maximum number of files to load.
-    num_workers : int
-        Thread-pool size for parallel I/O.
-
-    Returns
-    -------
-    np.ndarray
-        1-D float32 array of all valid pixel values.
-    """
     satellite_root = config.paths.satellite_root
     nodata_value = config.satellite.nodata_value
     fill_value = config.satellite.fill_value
@@ -93,17 +37,15 @@ def collect_pixels_for_channel(rows, channel, config, max_samples, num_workers):
     lead_min = config.temporal.radar_lead_minutes
     dt_format = config.metadata.datetime_format
 
-    # Build task list — one file per sample (most-recent timestep)
     tasks = []
     for row in rows[:max_samples]:
         sample_time = datetime.strptime(row["reference_time"], dt_format)
         satellite_times, _ = get_satellite_history_and_radar_target(
             sample_time, cadence, history_min, lead_min
         )
-        t = satellite_times[-1]  # most-recent timestep
+        t = satellite_times[-1]
         tasks.append((satellite_root, t, channel, nodata_value, fill_value))
 
-    # Parallel I/O
     all_pixels = []
     with ThreadPoolExecutor(max_workers=num_workers) as pool:
         futures = {pool.submit(load_one_satellite_file, *task): task for task in tasks}
@@ -130,7 +72,7 @@ def main():
     )
     parser.add_argument(
         "--metadata",
-        default="metadata/train_sampled.csv",
+        default="metadata/train_multihorizon.csv",
         help="Path to training metadata CSV",
     )
     parser.add_argument(
@@ -178,7 +120,6 @@ def main():
         f"  Effective files     : min({args.max_samples:,}, {len(df):,}) = {min(args.max_samples, len(df)):,} per channel\n"
     )
 
-    # Compute stats
     channel_stats = {}
 
     for ch in channels:
@@ -191,7 +132,6 @@ def main():
         mean = float(np.mean(pixels))
         std = float(np.std(pixels))
 
-        # Also print min/max/percentiles as sanity check (NOT used for normalization)
         p01 = float(np.percentile(pixels, 1))
         p99 = float(np.percentile(pixels, 99))
         vmin = float(pixels.min())
@@ -212,7 +152,6 @@ def main():
         print(f"    max          : {vmax:.4f}")
         print()
 
-    # Print ready-to-paste dict
     print(f"{'='*70}")
     print("  CHANNEL_STATS  —  copy-paste into satellite_radar_dataset.py")
     print(f"{'='*70}")
@@ -222,12 +161,11 @@ def main():
     print("}")
     print(f"{'='*70}\n")
 
-    # Save JSON
     os.makedirs(os.path.dirname(args.out_json) or ".", exist_ok=True)
     with open(args.out_json, "w") as f:
         json.dump(channel_stats, f, indent=4)
 
-    print(f"  Saved: {args.out_json}")
+    print(f"  Saved → {args.out_json}")
     print("  Done!\n")
 
 

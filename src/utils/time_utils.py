@@ -6,15 +6,6 @@ def get_satellite_history_and_radar_target(
     history_minutes,
     lead_minutes,
 ):
-    """
-    reference_time = LAST satellite timestamp (t)
-
-    Satellite history:
-      t-25, t-20, t-15, t-10, t-5, t   (for 30 min, 5-min cadence)
-
-    Radar target:
-      t + lead_minutes
-    """
     n_steps = history_minutes // cadence_minutes  # 6
 
     satellite_times = [
@@ -25,3 +16,4 @@ def get_satellite_history_and_radar_target(
     radar_target_time = reference_time + timedelta(minutes=lead_minutes)
 
     return satellite_times, radar_target_time
+

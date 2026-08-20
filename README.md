@@ -1,97 +1,275 @@
-# convective-nowcasting
+# Convective Nowcasting
 
+Convective precipitation is highly localized and evolves continuously over short timescales, making short-term precipitation forecasting particularly challenging despite its importance for early warning and weather-sensitive operations. This thesis evaluates five deep learning architectures for convective precipitation nowcasting over Germany and investigates whether combining radar and satellite observations improves forecasting performance compared with a radar-only configuration. The models were trained using paired RADOLAN radar and SEVIRI satellite observations collected between 2015 and 2024. In addition to the five individual architectures, an ensemble combining their predictions was also evaluated. Forecast performance was assessed at lead times of 15, 30, 45, and 60 minutes using both continuous and categorical evaluation metrics. No single architecture performed best across all metrics. The ensemble achieved the strongest overall performance, whereas VPTR showed the highest categorical skill, particularly at longer lead times. Integrating satellite observations consistently improved forecast quality, with the largest gains observed at longer prediction horizons. Severe convective precipitation remained the most difficult to predict because such events were underrepresented in the training data. These findings demonstrate the importance of both model architecture and multimodal observations for improving convective precipitation nowcasting.
 
+## Contents
 
-## Getting started
+- [Overview](#overview)
+- [Repository layout](#repository-layout)
+- [Requirements](#requirements)
+- [Installation](#installation)
+  - [Local (pip)](#local-pip)
+  - [Docker (recommended)](#docker-recommended)
+- [Data preparation](#data-preparation)
+- [Configuration](#configuration)
+- [Training](#training)
+  - [Multimodal (satellite + radar)](#multimodal-satellite--radar)
+  - [Radar-only](#radar-only)
+  - [pySTEPS baseline](#pysteps-baseline)
+- [Inference](#inference)
+- [Experiment tracking (MLflow)](#experiment-tracking-mlflow)
+- [Models](#models)
+- [Outputs](#outputs)
+- [License](#license)
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+## Overview
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+Two input modes are supported end-to-end (data loading, training, and
+inference):
 
-## Add your files
+| Mode          | Input                                   | Scripts live in    |
+|---------------|------------------------------------------|---------------------|
+| **Multimodal**| Radar history + Meteosat CH7/CH9 history  | `train/multimodal/` |
+| **Radar-only**| Radar history only                        | `train/radar/`      |
 
-* [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+Both modes share the same underlying dataset class
+(`src/datasets/satellite_radar_patch_dataset.py`), loss functions,
+verification metrics (ETS/CSI), and visualization pipeline — only the
+input channel count and a `radar_only` flag differ.
+
+Five deep learning backbones are implemented under `src/models/`, each with
+a matching training script in both `train/multimodal/` and `train/radar/`:
+
+- **SmaAt-UNet** — `train_smaAt_UNet.py`
+- **ConvLSTM** — `train_ConvLSTM.py`
+- **SimVP** — `train_simVP.py`
+- **EarthFormer** (CuboidTransformer) — `train_earthformer.py`
+- **VPTR** — `train_VPTR.py`
+
+A classical optical-flow baseline (**pySTEPS**) is provided in
+`train/pySTEPS/train_baseline.py` for non-DL comparison.
+
+## Repository layout
 
 ```
-cd existing_repo
-git remote add origin https://gitlab.cc-asp.fraunhofer.de/sajib/convective-nowcasting.git
-=======
-git remote add origin https://gitlab.hhi.fraunhofer.de/sajib/convective-nowcasting.git
-git branch -M main
-git push -uf origin main
+convective-nowcasting/
+├── config/                       # YAML configs (data paths, model hparams)
+│   ├── config.yml
+│   └── earthformer_nowcast.yaml
+├── metadata/                     # Precomputed sample index, channel stats
+├── src/
+│   ├── datasets/                 # PyTorch Dataset classes
+│   ├── dataloaders/               # DataLoader construction helpers
+│   ├── models/                   # Model source (convlstm, simvp,
+│   │                              #   earthformer, vptr, smaat_unet, unet, ...)
+│   ├── preprocess/                # Metadata / stats generation scripts
+│   └── utils/                    # Config loading, transforms, IO, etc.
+├── train/
+│   ├── multimodal/                # Satellite + radar training scripts
+│   ├── radar/                     # Radar-only training scripts
+│   └── pySTEPS/                   # Classical baseline
+├── visualization/                # Standalone plotting utilities
+├── unittest/                     # Sanity checks for the data pipeline
+├── slurms/                       # SLURM batch scripts for cluster jobs
+├── artifacts/outputs/            # Saved figures / evaluation outputs
+├── Dockerfile.multimodal
+├── Dockerfile.radar
+├── requirements.txt
+└── setup.py
 ```
 
-## Integrate with your tools
+Model checkpoints, MLflow runs, and training-visualization PNGs are written
+at runtime (not checked into the repo) — see [Outputs](#outputs).
 
-* [Set up project integrations](https://gitlab.cc-asp.fraunhofer.de/sajib/convective-nowcasting/-/settings/integrations)
-=======
-* [Set up project integrations](https://gitlab.hhi.fraunhofer.de/sajib/convective-nowcasting/-/settings/integrations)
+## Requirements
 
-## Collaborate with your team
-
-* [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
-
-## Test and Deploy
-
-Use the built-in continuous integration in GitLab.
-
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+- Python 3.10 or 3.11
+- A CUDA-capable GPU (EarthFormer and VPTR are the most memory-hungry;
+  budget accordingly)
+- See `requirements.txt` for the full Python dependency list
+  (PyTorch, torchvision, numpy, pandas, matplotlib, scikit-image, scipy,
+  einops, omegaconf, tqdm, mlflow, PyYAML)
 
 ## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+### Local (pip)
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+pip install -e .          # installs this repo as an editable package (setup.py)
+```
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+### Docker (recommended)
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+Two images are provided — one per input mode — with no training script
+baked in, so you pick which model to run at `docker run` time.
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+```bash
+# Build (from the repo root)
+docker build -t nowcast-multimodal -f Dockerfile.multimodal .
+docker build -t nowcast-radar      -f Dockerfile.radar .
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+# Sanity-check GPU visibility inside each image
+docker run --rm --gpus all nowcast-multimodal python -c \
+    "import torch; print(torch.__version__, torch.cuda.is_available())"
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+# Run any model (mount the repo so code/checkpoints/data are visible)
+docker run --gpus all --shm-size=8g -v $(pwd):/workspace nowcast-multimodal \
+    python train/multimodal/train_ConvLSTM.py
+
+docker run --gpus all --shm-size=8g -v $(pwd):/workspace nowcast-radar \
+    python train/radar/train_simVP.py
+```
+
+For long runs, launch detached and tail the logs:
+
+```bash
+docker run -d --gpus all --shm-size=8g --restart unless-stopped \
+    -v $(pwd):/workspace --name train-simvp-multimodal \
+    nowcast-multimodal python train/multimodal/train_simVP.py
+
+docker logs -f train-simvp-multimodal
+```
+
+## Data preparation
+
+Raw inputs are per-timestep `.npy` radar frames (`radar_de/`) and
+per-channel satellite frames (`satellite_de_regridded/`). Before training,
+run the preprocessing scripts in `src/preprocess/` in order:
+
+1. **`compute_mean_std_satellite.py`** — per-channel satellite
+   normalization stats → `metadata/channel_stats.json`
+2. **`generate_metadata_multihorizon.py`** /
+   **`generate_metadata_multihorizon_season.py`** — builds the sample
+   index (valid `reference_time` → history/target timestamp pairs) across
+   all forecast horizons → `metadata/all_samples.csv`
+3. **`generate_metadata_patch.py`** — expands the full-image index into
+   fixed-size training patches with row/col offsets
+4. **`sampling_patch_metadata.py`** — subsamples patches (e.g. to balance
+   rain intensity) into the `train`/`val` CSVs referenced by the training
+   configs
+5. **`global_quantile_threshold_multihorizon.py`** /
+   **`compute_presample_thresholds.py`** — computes rain-rate percentile
+   thresholds → `metadata/storm_threshold.json`
+6. **`generate_test_data_full_image.py`** — builds the held-out
+   full-image (unpatched) evaluation set used by `inference.py`
+
+Equivalent SLURM wrappers for a subset of these steps are in `slurms/`.
+
+Before a real training run, verify the pipeline end-to-end with:
+
+```bash
+python unittest/sanity_check_dataloader_pipeline.py
+```
+
+## Configuration
+
+- **`config/config.yml`** — shared settings: data paths, satellite
+  channels, temporal history/cadence, forecast horizons, spatial
+  transform, NaN-handling policy.
+- **`config/earthformer_nowcast.yaml`** — EarthFormer/CuboidTransformer
+  architecture hyperparameters. Its `input_shape` must match
+  `[n_timesteps, 256, 256, n_channels_per_step]` — `n_channels_per_step`
+  is `3` for multimodal (2 satellite channels + radar) and `1` for
+  radar-only. Each EarthFormer training script asserts this at startup.
+
+Per-model training hyperparameters (learning rate, gradient clipping,
+mixed precision, loss weights, checkpoint/MLflow names) live at the top of
+each `train_*.py` script as a `MultiHorizonTrainingConfig` class — edit
+there rather than in `config.yml`.
+
+## Training
+
+Every training script is self-contained: it loads `config.yml`, builds the
+dataset/dataloaders, builds its model, and runs the full train/validate
+loop with checkpointing, ETS/CSI verification, and MLflow logging.
+
+### Multimodal (satellite + radar)
+
+```bash
+python train/multimodal/train_smaAt_UNet.py
+python train/multimodal/train_ConvLSTM.py
+python train/multimodal/train_simVP.py
+python train/multimodal/train_earthformer.py
+python train/multimodal/train_VPTR.py
+```
+
+### Radar-only
+
+Identical interface, radar history only as input:
+
+```bash
+python train/radar/train_smaAt_UNet.py
+python train/radar/train_ConvLSTM.py
+python train/radar/train_simVP.py
+python train/radar/train_earthformer.py
+python train/radar/train_VPTR.py
+```
+
+### pySTEPS baseline
+
+```bash
+python train/pySTEPS/train_baseline.py
+```
+
+Each script writes:
+
+- `CHECKPOINTS_<MODEL>_.../last.pth`, `best.pth`, `best_ets.pth`
+- `TRAINVIS_<MODEL>_.../` and `VALVIZ_<MODEL>_.../` — periodic
+  storm-sample visualization PNGs
+- An MLflow run under `mlruns/` with per-epoch loss, MAE/RMSE/SSIM/PSNR,
+  and ETS/CSI at the configured operational and extreme thresholds
+
+## Inference
+
+Full-image (unpatched, patch-stitched) multi-model comparison and
+ensembling:
+
+```bash
+python train/multimodal/inference.py --num_samples 10
+python train/radar/inference.py      --num_samples 10
+```
+
+Useful flags: `--horizons`, `--metadata_csv`, `--out_dir`, `--patch_size`,
+`--patch_overlap`, `--device`, `--show_storm_metrics`. Each run writes
+per-sample comparison figures plus `dl_fullimage_metrics.csv` and
+`dl_fullimage_mean_metrics.csv` to `--out_dir`.
+
+## Experiment tracking (MLflow)
+
+```bash
+mlflow ui --backend-store-uri mlruns
+```
+
+Then open `http://localhost:5000` to compare runs across models, input
+modes, and hyperparameter settings.
+
+## Models
+
+| Model        | Source                          | Notes                                   |
+|--------------|----------------------------------|------------------------------------------|
+| SmaAt-UNet   | `src/models/smaat_unet/`        | Depthwise-separable U-Net + CBAM         |
+| ConvLSTM     | `src/models/convlstm/`          | Encoder–ConvLSTM–Decoder                 |
+| SimVP        | `src/models/simvp/`             | Conv encoder/decoder + Inception temporal blocks |
+| EarthFormer  | `src/models/earthformer/`       | Cuboid-attention spatiotemporal transformer |
+| VPTR         | `src/models/vptr/`              | Non-autoregressive video transformer     |
+| pySTEPS      | `train/pySTEPS/`                 | Classical optical-flow baseline (non-DL) |
+
+`src/models/` also vendors several additional research backbones
+(MCVD, MetNet, PredRNN, Rainformer, SwinLSTM, pix2pixHD) that are not yet
+wired into a `train/` script — see their subdirectories for standalone
+usage.
+
+## Outputs
+
+- `artifacts/outputs/{multimodal,radar,non-DL}/` — saved evaluation
+  figures and summary tables
+- `logs/` — free-form run logs
+- Checkpoints, viz PNGs, and `mlruns/` are created at the repo root by
+  each training script (not tracked in version control by default)
 
 ## License
-For open source projects, say how it is licensed.
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+See [LICENSE](LICENSE).

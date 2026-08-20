@@ -1,6 +1,7 @@
 import csv
 import os
 
+
 def write_metadata_csv(rows, csv_path):
     if not rows:
         return

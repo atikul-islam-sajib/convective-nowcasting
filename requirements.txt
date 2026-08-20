@@ -1,20 +1,17 @@
-# Core language utilities
 numpy
 pandas
 PyYAML
-
-# Deep learning
 torch
 torchvision
-
-# Image processing / resizing
 opencv-python
 Pillow
-
-# Utilities
 tqdm
 matplotlib
 scipy
 xarray
 netCDF4
 wradlib
+scikit-image
+einops
+omegaconf
+mlflow
