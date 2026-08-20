@@ -1,6 +1,7 @@
-# Convective Nowcasting
+# Convective Precipiation Nowcasting
 
 Convective precipitation is highly localized and evolves continuously over short timescales, making short-term precipitation forecasting particularly challenging despite its importance for early warning and weather-sensitive operations. This thesis evaluates five deep learning architectures for convective precipitation nowcasting over Germany and investigates whether combining radar and satellite observations improves forecasting performance compared with a radar-only configuration. The models were trained using paired RADOLAN radar and SEVIRI satellite observations collected between 2015 and 2024. In addition to the five individual architectures, an ensemble combining their predictions was also evaluated. Forecast performance was assessed at lead times of 15, 30, 45, and 60 minutes using both continuous and categorical evaluation metrics. No single architecture performed best across all metrics. The ensemble achieved the strongest overall performance, whereas VPTR showed the highest categorical skill, particularly at longer lead times. Integrating satellite observations consistently improved forecast quality, with the largest gains observed at longer prediction horizons. Severe convective precipitation remained the most difficult to predict because such events were underrepresented in the training data. These findings demonstrate the importance of both model architecture and multimodal observations for improving convective precipitation nowcasting.
+
 
 ## Contents
 
@@ -20,6 +21,7 @@ Convective precipitation is highly localized and evolves continuously over short
 - [Experiment tracking (MLflow)](#experiment-tracking-mlflow)
 - [Models](#models)
 - [Outputs](#outputs)
+  - [Example outputs](#example-outputs)
 - [License](#license)
 
 ## Overview
@@ -269,6 +271,26 @@ usage.
 - `logs/` — free-form run logs
 - Checkpoints, viz PNGs, and `mlruns/` are created at the repo root by
   each training script (not tracked in version control by default)
+
+### Example outputs
+
+Storm-sample comparison figures and summary charts saved by
+`inference.py`, one set per input mode:
+
+**Multimodal** — `artifacts/outputs/multimodal/`
+
+<img src="artifacts/outputs/multimodal/sample_04_2024-06-30_0045.png" width="480" alt="Multimodal storm sample comparison">
+<img src="artifacts/outputs/multimodal/table51_radar_chart(2).png" width="480" alt="Multimodal summary radar chart">
+
+**Radar-only** — `artifacts/outputs/radar/`
+
+<img src="artifacts/outputs/radar/sample_04_2024-06-30_0130.png" width="480" alt="Radar-only storm sample comparison">
+<img src="artifacts/outputs/radar/table52_radar_chart.png" width="480" alt="Radar-only summary radar chart">
+
+Both directories fill up automatically as you run `inference.py` for
+each mode — the filenames above are simply the ones already checked in
+as examples. `artifacts/outputs/non-DL/` holds the equivalent pySTEPS
+baseline comparisons.
 
 ## License
 
