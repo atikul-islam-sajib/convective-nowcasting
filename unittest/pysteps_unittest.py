@@ -2,7 +2,7 @@ import unittest
 import numpy as np
 import pandas as pd
 
-from pysteps_lk_extrapolation_fixed import (
+from train_baseline import (
     contingency_counts,
     csi_from_counts,
     ets_from_counts,
