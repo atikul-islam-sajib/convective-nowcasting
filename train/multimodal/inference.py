@@ -114,7 +114,7 @@ class InferenceConfig:
     patch_overlap = 64
     patch_blend   = 'cosine'
 
-    num_samples          = 300
+    num_samples          = 1000 # We can set None, 1000, 10000, 100000
 
     operational_thr      = 15.0
     extreme_thr          = 35.0
