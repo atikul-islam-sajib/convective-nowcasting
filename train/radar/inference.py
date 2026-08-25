@@ -314,8 +314,8 @@ def compute_simple_mean(metrics_df, cfg):
 
         csi_cols = [c for c in value_cols if c.startswith('CSI@')]
         ets_cols = [c for c in value_cols if c.startswith('ETS@')]
-        row['CSI-M'] = float(np.nanmean(g[csi_cols].values)) if csi_cols else float('nan')
-        row['ETS-M'] = float(np.nanmean(g[ets_cols].values)) if ets_cols else float('nan')
+        row['CSI-M'] = float(np.nanmean([row[c] for c in csi_cols])) if csi_cols else float('nan')
+        row['ETS-M'] = float(np.nanmean([row[c] for c in ets_cols])) if ets_cols else float('nan')
         rows.append(row)
     return pd.DataFrame(rows)
 
