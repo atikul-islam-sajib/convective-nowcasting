@@ -1,148 +1,162 @@
 import os
 import json
-from datetime import datetime, timedelta
 import argparse
-import multiprocessing as mp
 import numpy as np
 import pandas as pd
 import matplotlib
-matplotlib.use('Agg')
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 import matplotlib.patches as mpatches
-from scipy.ndimage import distance_transform_edt
-from skimage.metrics import structural_similarity
-from pysteps import motion, nowcasts
-from thresholds import VIZ_OPERATIONAL_MMH, VIZ_EXTREME_MMH
-import colors as PALETTE
-CLIP_MAX_MMH = 128.0
-RAIN_LEVELS = PALETTE.RAIN_LEVELS
-RAIN_COLORS = PALETTE.RAIN_COLORS
-RAIN_CMAP = PALETTE.RAIN_CMAP
-RAIN_NORM = PALETTE.RAIN_NORM
-BG_COLOR = PALETTE.BG_COLOR
+from matplotlib.colors import ListedColormap, BoundaryNorm
+from datetime import datetime, timedelta
 
-class Config:
-    categorical_thresholds = [5.0, 15.0]
-    subset_size = 200
-    subset_manifest_csv = os.path.join('MEAN_PYSTEPS', 'final_test_manifest.csv')
-    use_existing_subset_manifest = True
-    out_dir = 'LK_EXTRAPOLATION_PYSTEPS_FINAL'
-    num_processes = max(1, (os.cpu_count() or 4) - 1)
-    radar_base = '/home/fe/sajib/scratch/weather-data/radar_de'
-    sat_base = '/home/fe/sajib/scratch/weather-data/satellite_de_regridded'
-    channels = ['CH7', 'CH9']
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+from skimage.morphology import closing, remove_small_objects, disk
+from skimage.metrics import structural_similarity
+from scipy.ndimage import label
+from einops import rearrange
+from omegaconf import OmegaConf
+
+from src.models.smaat_unet.SmaAt_UNet import SmaAt_UNet
+from src.models.convlstm.net_params_multihorizon import (
+    convlstm_encoder_params, get_convlstm_decoder_params)
+from src.models.convlstm.model import ED
+from src.models.convlstm.encoder import Encoder
+from src.models.convlstm.decoder import Decoder
+from src.models.simvp.model import SimVP
+from src.models.simvp.modules import ConvSC, Inception
+from src.models.earthformer.cuboid_transformer.cuboid_transformer import CuboidTransformerModel
+from src.models.unet.unet_model import UNet
+from src.models.vptr.model.VPTR_modules import VPTREnc, VPTRDec, VPTRFormerNAR
+
+
+CLIP_MAX_MMH     = 128.0
+SOFTLOG_EPS      = 1.0
+SOFTLOG_LOG_NORM = np.log10(CLIP_MAX_MMH + SOFTLOG_EPS)
+
+RAIN_LEVELS = [0.1, 1, 2, 5, 10, 15, 20, 30, 40, 60, 100]
+RAIN_COLORS = [
+    "#1a5c1a", "#22aa22", "#55cc22", "#ffee00", "#ffaa00",
+    "#ff6600", "#ff2200", "#cc0000", "#aa0077", "#ff00ff",
+]
+RAIN_CMAP = ListedColormap(RAIN_COLORS)
+RAIN_NORM = BoundaryNorm(RAIN_LEVELS, RAIN_CMAP.N)
+BG_COLOR  = "#888888"
+
+
+MODELS = [
+    {'key': 'smaat_unet',  'label': 'SmaAt-UNet',  'color': '#4488ff'},
+    {'key': 'convlstm',    'label': 'ConvLSTM',     'color': '#ff8844'},
+    {'key': 'simvp',       'label': 'SimVP',         'color': '#44cc88'},
+    {'key': 'earthformer', 'label': 'EarthFormer',  'color': '#cc44ff'},
+    {'key': 'vptr',        'label': 'VPTR',          'color': '#ff4488'},
+    {'key': 'ensemble',    'label': 'Ensemble',      'color': '#ffffff'},
+]
+
+
+REAL_MODEL_KEYS = [m['key'] for m in MODELS if m['key'] != 'ensemble']
+
+
+class InferenceConfig:
+
+    out_dir      = 'INFERENCE_FULLIMAGE_COMPARISON_RADAR'
     metadata_csv = 'metadata_patch/test_fullimage_summer.csv'
-    channel_stats_json = 'metadata/channel_stats.json'
-    detailed_metrics_csv = os.path.join(out_dir, 'lk_extrapolation_radar_multimodal_metrics.csv')
-    mean_metrics_csv = os.path.join(out_dir, 'lk_extrapolation_radar_multimodal_mean_metrics.csv')
-    num_in_frames = 5
-    lk_num_frames = 5
+
+    detailed_metrics_csv = os.path.join(out_dir, 'dl_fullimage_metrics.csv')
+    mean_metrics_csv      = os.path.join(out_dir, 'dl_fullimage_mean_metrics.csv')
+
+    radar_base = '/home/fe/sajib/scratch/weather-data/radar_de'
+
+    num_in_frames  = 5
     stride_minutes = 5
-    horizons = [15, 30, 45, 60]
-    metric_horizons = [15, 30, 45, 60]
-    rain_threshold = 0.1
-    precip_thr_db = 10.0 * np.log10(rain_threshold)
-    zerovalue_db = -15.0
-    extrap_method = 'semilagrangian'
-    motion_method = 'LK'
-    nowcast_method = 'extrapolation'
-    sprog_ar_order = 2
-    sprog_n_cascade_levels = 6
-    fss_window_sizes = (1, 5, 9, 17)
-    extrap_interp_order = 1
-    save_motion_diagnostics = False
-    save_overlay_diagnostics = False
-    overlay_diagnostic_horizons = (15, 30)
-    use_persistence_blend = False
-    persistence_blend_max_horizon = 30
-    use_active_rain_subset = True
-    active_rain_threshold_mmh = 1.0
-    subset_seed = 42
-    use_existing_subset_manifest = True
-    num_samples = 1
-    select_top_p99 = True
-    select_on_the_hour = False
-    csi_threshold_mmh = 15.0
-    psnr_data_range = CLIP_MAX_MMH
-    save_images = False
-    save_images_only_datetimes = None
-    operational_thr = VIZ_OPERATIONAL_MMH
-    extreme_thr = VIZ_EXTREME_MMH
+    horizons       = [15, 30, 45, 60]
+
+    smaat_checkpoint       = 'CHECKPOINTS_SMAATUNET_PATCH_1KM_SUMMER_2H_2015_to_2024_t15_to_t60_RADAR/best_ets.pth'
+    convlstm_checkpoint    = 'CHECKPOINTS_CONVLSTM_PATCH_1KM_SUMMER_2H_2015_to_2024_t15_to_t60_RADAR/best_ets.pth'
+    simvp_checkpoint       = 'CHECKPOINTS_SIMVP_PATCH_1KM_SUMMER_2H_2015_to_2024_t15_to_t60_RADAR/best_ets.pth'
+    earthformer_checkpoint = 'CHECKPOINTS_EARTHFORMER_PATCH_1KM_SUMMER_2H_2015_to_2024_t15_to_t60_RADAR/best_ets.pth'
+    vptr_checkpoint        = 'CHECKPOINTS_VPTR_PATCH_1KM_SUMMER_2H_2015_to_2024_t15_to_t60_RADAR/best_ets.pth'
+    earthformer_config_yml = 'config/earthformer_nowcast.yaml'
+
+    smaat_kernels_per_layer = 2
+    smaat_bilinear          = True
+    smaat_reduction_ratio   = 16
+
+    hid_S        = 64
+    hid_T        = 256
+    N_S          = 4
+    N_T          = 8
+    incep_ker    = [3, 5, 7, 11]
+    simvp_groups = 8
+
+    unet_bilinear = True
+
+    vptr_feat_dim           = 192
+    vptr_n_downsampling     = 3
+    vptr_encH               = 32
+    vptr_encW               = 32
+    vptr_d_model            = 192
+    vptr_nhead              = 4
+    vptr_num_encoder_layers = 2
+    vptr_num_decoder_layers = 2
+    vptr_dropout            = 0.1
+    vptr_window_size        = 4
+    vptr_spatial_ffn_ratio  = 4
+    vptr_rpe                = True
+
+    patch_size    = 256
+    patch_overlap = 64
+    patch_blend   = 'cosine'
+
+    num_samples          = 5
+
+    operational_thr      = 15.0
+    extreme_thr          = 35.0
+    storm_min_pixels     = 200
+    morphology_disk_size = 4
+    storm_min_area_km2   = 200.0
+    storm_max_area_km2   = 10000.0
+    pixel_area_km2       = 1.0
+
+    show_storm_metrics = False
+
+    rain_threshold      = 0.1
+    zerovalue_db        = -15.0
+    psnr_data_range      = CLIP_MAX_MMH
+
+    csi_threshold_mmh      = [5.0, 15.0]
+    categorical_thresholds = [5.0, 15.0]
+
+    ensemble_weights = {"smaat_unet": 1.0, "convlstm": 1.0, "simvp": 1.0, "earthformer": 1.0, "unet": 1.0, "vptr": 1.0}
+
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
 
 def radar_path(base, dt):
-    return os.path.join(base, dt.strftime('%y%m'), dt.strftime('%d'), dt.strftime('%y%m%d_%H%M') + '.npy')
+    return os.path.join(base, dt.strftime('%y%m'), dt.strftime('%d'),
+                        dt.strftime('%y%m%d_%H%M') + '.npy')
 
-def satellite_path(base, dt, channel):
-    return os.path.join(base, dt.strftime('%Y'), dt.strftime('%m'), dt.strftime('%d'), dt.strftime('%H%M%S') + f'_{channel}.npy')
 
 def get_history_times(current_time, num_frames, stride_minutes):
     start = current_time - (num_frames - 1) * timedelta(minutes=stride_minutes)
-    return [start + timedelta(minutes=stride_minutes * i) for i in range(num_frames)]
+    return [start + timedelta(minutes=stride_minutes) * i for i in range(num_frames)]
 
-def get_target_times(current_time, horizons):
-    return [current_time + timedelta(minutes=h) for h in horizons]
 
-def load_npy(path):
-    if not os.path.exists(path):
-        raise FileNotFoundError(f'\nFile not found:\n{path}')
-    return np.load(path).astype(np.float32)
+def get_target_times(current_time, horizons_minutes):
+    return [current_time + timedelta(minutes=h) for h in horizons_minutes]
 
-def load_channel_stats(cfg):
-    if not os.path.exists(cfg.channel_stats_json):
-        print('\nWARNING: channel_stats.json not found.')
-        print('Satellite normalization will use per-sequence robust normalization.')
-        return None
-    with open(cfg.channel_stats_json, 'r') as f:
-        stats = json.load(f)
-    return {int(k): v for k, v in stats.items()}
 
-def inpaint_nearest(arr, valid_mask):
-    if valid_mask.all():
-        return arr
-    if not valid_mask.any():
-        return np.zeros_like(arr)
-    idx = distance_transform_edt(~valid_mask, return_distances=False, return_indices=True)
-    return arr[tuple(idx)]
+def softlog_transform(x_mmh):
+    return np.log10(np.clip(x_mmh, 0.0, CLIP_MAX_MMH) + SOFTLOG_EPS) / SOFTLOG_LOG_NORM
 
-def load_sample(row, cfg):
-    dt = datetime.strptime(row['datetime'], '%Y-%m-%d %H:%M:%S')
-    history_times = get_history_times(dt, cfg.lk_num_frames, cfg.stride_minutes)
-    target_times = get_target_times(dt, cfg.metric_horizons)
-    radar_history = []
-    radar_history_masks = []
-    for t in history_times:
-        path = radar_path(cfg.radar_base, t)
-        arr = load_npy(path)
-        valid = np.isfinite(arr)
-        arr = np.nan_to_num(arr, nan=0.0, posinf=0.0, neginf=0.0)
-        arr = np.clip(arr, 0.0, CLIP_MAX_MMH)
-        arr = inpaint_nearest(arr, valid)
-        radar_history.append(arr)
-        radar_history_masks.append(valid)
-    radar_history = np.stack(radar_history, axis=0).astype(np.float32)
-    radar_history_masks = np.stack(radar_history_masks, axis=0)
-    satellite_history = {}
-    for channel in cfg.channels:
-        channel_frames = []
-        for t in history_times:
-            path = satellite_path(cfg.sat_base, t, channel)
-            arr = load_npy(path)
-            valid = np.isfinite(arr)
-            arr = np.nan_to_num(arr, nan=0.0, posinf=0.0, neginf=0.0)
-            arr = inpaint_nearest(arr, valid)
-            channel_frames.append(arr)
-        satellite_history[channel] = np.stack(channel_frames, axis=0).astype(np.float32)
-    gt = {}
-    masks = {}
-    for h, t in zip(cfg.metric_horizons, target_times):
-        path = radar_path(cfg.radar_base, t)
-        arr = load_npy(path)
-        valid = np.isfinite(arr)
-        clean = np.nan_to_num(arr, nan=0.0, posinf=0.0, neginf=0.0)
-        clean = np.clip(clean, 0.0, CLIP_MAX_MMH)
-        gt[h] = clean.astype(np.float32)
-        masks[h] = valid
-    return (radar_history, radar_history_masks, satellite_history, gt, masks, dt, history_times, target_times)
+
+def inverse_transform_np(y_log):
+    return np.clip(10.0 ** (y_log * SOFTLOG_LOG_NORM) - SOFTLOG_EPS, 0.0, CLIP_MAX_MMH)
+
 
 def rainrate_to_db(rain, threshold=0.1, zerovalue=-15.0):
     rain = np.asarray(rain, dtype=np.float32)
@@ -151,190 +165,30 @@ def rainrate_to_db(rain, threshold=0.1, zerovalue=-15.0):
     result[wet] = 10.0 * np.log10(rain[wet])
     return result
 
-def db_to_rainrate(data, cfg):
-    data = np.asarray(data, dtype=np.float32)
-    rain = np.zeros_like(data, dtype=np.float32)
-    valid = np.isfinite(data) & (data > cfg.zerovalue_db)
-    rain[valid] = 10.0 ** (data[valid] / 10.0)
-    rain[rain < cfg.rain_threshold] = 0.0
-    return np.clip(rain, 0.0, CLIP_MAX_MMH).astype(np.float32)
-
-def normalize_satellite_sequence(seq, channel, channel_stats):
-    seq = np.asarray(seq, dtype=np.float32)
-    ch_number = int(channel.replace('CH', ''))
-    if channel_stats is not None and ch_number in channel_stats:
-        mean = float(channel_stats[ch_number]['mean'])
-        std = float(channel_stats[ch_number]['std'])
-        seq = (seq - mean) / (std + 1e-08)
-    else:
-        finite = np.isfinite(seq)
-        if not np.any(finite):
-            return np.zeros_like(seq)
-        median = np.median(seq[finite])
-        p25 = np.percentile(seq[finite], 25)
-        p75 = np.percentile(seq[finite], 75)
-        scale = max(p75 - p25, 1e-06)
-        seq = (seq - median) / scale
-    seq = np.nan_to_num(seq, nan=0.0, posinf=0.0, neginf=0.0)
-    low = np.percentile(seq, 1)
-    high = np.percentile(seq, 99)
-    if high - low < 1e-08:
-        return np.zeros_like(seq)
-    seq = (seq - low) / (high - low)
-    seq = np.clip(seq, 0.0, 1.0)
-    return seq.astype(np.float32)
-
-def estimate_lk_motion(frames, name, cfg):
-    frames = np.asarray(frames, dtype=np.float32)
-    frames = np.nan_to_num(frames, nan=0.0, posinf=0.0, neginf=0.0)
-    if cfg.motion_method in ('VET', 'proesmans'):
-        motion_frames = frames[-3:] if frames.shape[0] >= 3 else frames[-2:]
-    else:
-        motion_frames = frames
-    print(f'       {cfg.motion_method} motion: {name}  (using last {motion_frames.shape[0]} of {frames.shape[0]} frames)')
-    oflow = motion.get_method(cfg.motion_method)
-    velocity = oflow(motion_frames)
-    velocity = np.nan_to_num(velocity, nan=0.0, posinf=0.0, neginf=0.0).astype(np.float32)
-    mean_speed = np.mean(np.sqrt(velocity[0] ** 2 + velocity[1] ** 2))
-    print(f'          mean speed = {mean_speed:.4f} pixels/timestep')
-    return velocity
-
-def estimate_radar_motion(radar_db, cfg):
-    return estimate_lk_motion(radar_db, 'Radar', cfg)
-
-def estimate_multimodal_motion(radar_db, satellite_history, channel_stats, cfg):
-    v_radar = estimate_lk_motion(radar_db, 'Radar', cfg)
-    velocities = [v_radar]
-    for channel in cfg.channels:
-        sat_seq = satellite_history[channel][-cfg.lk_num_frames:]
-        sat_normalized = normalize_satellite_sequence(sat_seq, channel, channel_stats)
-        v_sat = estimate_lk_motion(sat_normalized, channel, cfg)
-        velocities.append(v_sat)
-    velocity_stack = np.stack(velocities, axis=0)
-    multimodal_velocity = np.median(velocity_stack, axis=0)
-    multimodal_velocity = np.nan_to_num(multimodal_velocity, nan=0.0, posinf=0.0, neginf=0.0).astype(np.float32)
-    mean_speed = np.mean(np.sqrt(multimodal_velocity[0] ** 2 + multimodal_velocity[1] ** 2))
-    print(f'       Combined multimodal mean speed = {mean_speed:.4f}')
-    return multimodal_velocity
-
-def run_lk_extrapolation_with_velocity(radar_history, velocity, cfg):
-    latest_radar = radar_history[-1]
-    n_steps = max(cfg.metric_horizons) // cfg.stride_minutes
-    if cfg.nowcast_method == 'sprog':
-        n_needed = cfg.sprog_ar_order + 1
-        precip_stack = radar_history[-n_needed:]
-        precip_stack_db = rainrate_to_db(precip_stack, threshold=cfg.rain_threshold, zerovalue=cfg.zerovalue_db)
-        precip_stack_db = np.nan_to_num(precip_stack_db, nan=cfg.zerovalue_db, posinf=cfg.zerovalue_db, neginf=cfg.zerovalue_db).astype(np.float32)
-        sprog = nowcasts.get_method('sprog')
-        sprog_kwargs = dict(precip_thr=cfg.precip_thr_db, n_cascade_levels=cfg.sprog_n_cascade_levels, extrap_method=cfg.extrap_method, extrap_kwargs={'interp_order': cfg.extrap_interp_order})
-        ar_orders_to_try = sorted({cfg.sprog_ar_order, 2}, reverse=True)
-        forecast_db = None
-        last_error = None
-        for attempt_ar_order in ar_orders_to_try:
-            n_needed_attempt = attempt_ar_order + 1
-            precip_stack_attempt = radar_history[-n_needed_attempt:]
-            precip_stack_db_attempt = rainrate_to_db(precip_stack_attempt, threshold=cfg.rain_threshold, zerovalue=cfg.zerovalue_db)
-            precip_stack_db_attempt = np.nan_to_num(precip_stack_db_attempt, nan=cfg.zerovalue_db, posinf=cfg.zerovalue_db, neginf=cfg.zerovalue_db).astype(np.float32)
-            try:
-                forecast_db = sprog(precip_stack_db_attempt, velocity, n_steps, ar_order=attempt_ar_order, **sprog_kwargs)
-                if attempt_ar_order != cfg.sprog_ar_order:
-                    print(f'    [WARN] sprog ar_order={cfg.sprog_ar_order} failed, succeeded at ar_order={attempt_ar_order}')
-                break
-            except Exception as error:
-                last_error = error
-                print(f'    [WARN] sprog ar_order={attempt_ar_order} failed: {error}')
-        if forecast_db is None:
-            print('    [WARN] sprog failed at all ar_order attempts -- falling back to plain extrapolation for this sample')
-            latest_radar_db = rainrate_to_db(latest_radar, threshold=cfg.rain_threshold, zerovalue=cfg.zerovalue_db)
-            latest_radar_db = np.nan_to_num(latest_radar_db, nan=cfg.zerovalue_db, posinf=cfg.zerovalue_db, neginf=cfg.zerovalue_db).astype(np.float32)
-            extrapolate = nowcasts.get_method('extrapolation')
-            forecast_db = extrapolate(latest_radar_db, velocity, n_steps, extrap_method=cfg.extrap_method, extrap_kwargs={'interp_order': cfg.extrap_interp_order})
-    else:
-        latest_radar_db = rainrate_to_db(latest_radar, threshold=cfg.rain_threshold, zerovalue=cfg.zerovalue_db)
-        latest_radar_db = np.nan_to_num(latest_radar_db, nan=cfg.zerovalue_db, posinf=cfg.zerovalue_db, neginf=cfg.zerovalue_db).astype(np.float32)
-        extrapolate = nowcasts.get_method('extrapolation')
-        forecast_db = extrapolate(latest_radar_db, velocity, n_steps, extrap_method=cfg.extrap_method, extrap_kwargs={'interp_order': cfg.extrap_interp_order})
-    forecast_db = np.asarray(forecast_db, dtype=np.float32)
-    forecast_mm = db_to_rainrate(forecast_db, cfg)
-    predictions = {}
-    for horizon in cfg.metric_horizons:
-        step = horizon // cfg.stride_minutes
-        index = step - 1
-        pred = np.clip(forecast_mm[index], 0.0, CLIP_MAX_MMH).astype(np.float32)
-        if cfg.use_persistence_blend and horizon <= cfg.persistence_blend_max_horizon:
-            w = 1.0 - horizon / cfg.persistence_blend_max_horizon
-            pred = np.clip((1.0 - w) * pred + w * latest_radar, 0.0, CLIP_MAX_MMH).astype(np.float32)
-        predictions[horizon] = pred
-    return predictions
-
-def run_both_baselines(radar_history, satellite_history, channel_stats, cfg):
-    print(f'\n    Preparing {cfg.motion_method} extrapolation input...')
-    radar_recent = radar_history[-cfg.lk_num_frames:]
-    radar_db = rainrate_to_db(radar_recent, threshold=cfg.rain_threshold, zerovalue=cfg.zerovalue_db)
-    print(f'\n    [1/2] pySTEPS RADAR ({cfg.motion_method})')
-    radar_velocity = estimate_radar_motion(radar_db, cfg)
-    radar_predictions = run_lk_extrapolation_with_velocity(radar_history, radar_velocity, cfg)
-    print(f'\n    [2/2] pySTEPS MULTIMODAL (Radar + CH7 + CH9 motion, {cfg.motion_method})')
-    multimodal_velocity = estimate_multimodal_motion(radar_db, satellite_history, channel_stats, cfg)
-    multimodal_predictions = run_lk_extrapolation_with_velocity(radar_history, multimodal_velocity, cfg)
-    return (radar_predictions, multimodal_predictions, radar_velocity, multimodal_velocity)
-
-def save_motion_diagnostic(t0_frame, velocity, name, dt, cfg, sample_index, step=12):
-    fig, ax = plt.subplots(figsize=(8, 8), facecolor='white')
-    ax.set_facecolor(BG_COLOR)
-    display_image = np.ma.masked_less(t0_frame, 0.1)
-    ax.imshow(display_image, cmap=RAIN_CMAP, norm=RAIN_NORM, interpolation='nearest')
-    h, w = t0_frame.shape
-    ys, xs = np.mgrid[0:h:step, 0:w:step]
-    vx = velocity[0][::step, ::step]
-    vy = velocity[1][::step, ::step]
-    ax.quiver(xs, ys, vx, vy, color='cyan', scale=None, width=0.002, alpha=0.85)
-    ax.set_title(f"{name} velocity field ({cfg.motion_method}) — {dt.strftime('%Y-%m-%d %H:%M')}", fontsize=10, fontweight='bold')
-    ax.axis('off')
-    out_path = os.path.join(cfg.out_dir, f'motion_diag_sample{sample_index:03d}_{name.lower()}_{cfg.motion_method}.png')
-    fig.savefig(out_path, dpi=150, bbox_inches='tight', facecolor='white')
-    plt.close(fig)
-    print(f'    Motion diagnostic saved: {out_path}')
-
-def save_overlay_diagnostic(prediction, target, mask, dt, cfg, sample_index, model_name, horizon):
-    fig, ax = plt.subplots(figsize=(9, 9), facecolor='white')
-    ax.set_facecolor(BG_COLOR)
-    display_image = np.ma.masked_less(prediction, 0.1)
-    display_image = np.ma.masked_where(~mask, display_image)
-    ax.imshow(display_image, cmap=RAIN_CMAP, norm=RAIN_NORM, interpolation='nearest')
-    gt_event = np.where(mask, (target >= cfg.csi_threshold_mmh).astype(np.float32), 0.0)
-    ax.contour(gt_event, levels=[0.5], colors='black', linewidths=1.5)
-    ax.set_title(f"{model_name} t+{horizon}min vs GT {cfg.csi_threshold_mmh:.0f}mm/h boundary (black) — {dt.strftime('%Y-%m-%d %H:%M')}", fontsize=10, fontweight='bold')
-    ax.axis('off')
-    out_path = os.path.join(cfg.out_dir, f'overlay_diag_sample{sample_index:03d}_{model_name.lower()}_t{horizon}.png')
-    fig.savefig(out_path, dpi=150, bbox_inches='tight', facecolor='white')
-    plt.close(fig)
-    print(f'    Overlay diagnostic saved: {out_path}')
 
 def contingency_counts(pred, target, threshold):
     pred_event = pred >= threshold
     target_event = target >= threshold
     hits = np.sum(pred_event & target_event)
-    misses = np.sum(~pred_event & target_event)
-    false_alarms = np.sum(pred_event & ~target_event)
-    correct_negatives = np.sum(~pred_event & ~target_event)
-    return (float(hits), float(misses), float(false_alarms), float(correct_negatives))
+    misses = np.sum((~pred_event) & target_event)
+    false_alarms = np.sum(pred_event & (~target_event))
+    correct_negatives = np.sum((~pred_event) & (~target_event))
+    return float(hits), float(misses), float(false_alarms), float(correct_negatives)
 
-def csi_from_counts(hits, misses, false_alarms):
-    denom = hits + misses + false_alarms
-    if denom == 0:
-        return np.nan
-    return hits / denom
 
-def ets_from_counts(hits, misses, false_alarms, correct_negatives):
-    total = hits + misses + false_alarms + correct_negatives
+def csi_from_counts(h, m, fa):
+    denom = h + m + fa
+    return float('nan') if denom == 0 else h / denom
+
+
+def ets_from_counts(h, m, fa, cn):
+    total = h + m + fa + cn
     if total == 0:
-        return np.nan
-    random_hits = (hits + misses) * (hits + false_alarms) / total
-    denom = hits + misses + false_alarms - random_hits
-    if denom == 0:
-        return np.nan
-    return (hits - random_hits) / denom
+        return float('nan')
+    random_hits = (h + m) * (h + fa) / total
+    denom = h + m + fa - random_hits
+    return float('nan') if denom == 0 else (h - random_hits) / denom
+
 
 def compute_psnr(pred, target, data_range):
     mse = np.mean((pred - target) ** 2)
@@ -342,21 +196,6 @@ def compute_psnr(pred, target, data_range):
         return float('nan')
     return 10.0 * np.log10(data_range ** 2 / mse)
 
-def compute_fss(pred_full, target_full, mask, threshold, window_sizes):
-    from scipy.ndimage import uniform_filter
-    pred_bin = np.where(mask, (pred_full >= threshold).astype(np.float32), 0.0)
-    target_bin = np.where(mask, (target_full >= threshold).astype(np.float32), 0.0)
-    results = {}
-    for w in window_sizes:
-        pf = uniform_filter(pred_bin, size=w, mode='constant')
-        of = uniform_filter(target_bin, size=w, mode='constant')
-        pf_v = pf[mask]
-        of_v = of[mask]
-        mse = np.mean((pf_v - of_v) ** 2)
-        mse_ref = np.mean(pf_v ** 2) + np.mean(of_v ** 2)
-        fss = 1.0 - mse / mse_ref if mse_ref > 0 else np.nan
-        results[f'FSS{w}'] = float(fss)
-    return results
 
 def compute_metrics(prediction, target, mask, cfg):
     valid = mask.astype(bool) & np.isfinite(prediction) & np.isfinite(target)
@@ -373,37 +212,430 @@ def compute_metrics(prediction, target, mask, cfg):
     else:
         pred_ssim = np.where(valid, prediction, 0.0)
         target_ssim = np.where(valid, target, 0.0)
-        _, ssim_map = structural_similarity(target_ssim, pred_ssim, data_range=cfg.psnr_data_range, gaussian_weights=True, sigma=1.5, use_sample_covariance=False, full=True)
+        _, ssim_map = structural_similarity(
+            target_ssim, pred_ssim, data_range=cfg.psnr_data_range,
+            gaussian_weights=True, sigma=1.5,
+            use_sample_covariance=False, full=True)
         ssim = float(ssim_map[valid].mean())
-    result = {'MAE': float(mae), 'MSE': float(mse), 'RMSE': float(rmse), 'PSNR': float(psnr), 'SSIM': float(ssim)}
+
+    result = {'MAE': float(mae), 'MSE': float(mse), 'RMSE': float(rmse),
+              'PSNR': float(psnr), 'SSIM': float(ssim)}
+
+    csi_thresholds = cfg.csi_threshold_mmh
+    if np.isscalar(csi_thresholds):
+        csi_thresholds = [csi_thresholds]
+
+    all_needed = set(csi_thresholds) | set(cfg.categorical_thresholds)
+    counts_by_threshold = {threshold: contingency_counts(p, y, threshold) for threshold in all_needed}
+
+    for threshold in csi_thresholds:
+        suffix = str(int(threshold)) if float(threshold).is_integer() else str(threshold)
+        h, m, fa, cn = counts_by_threshold[threshold]
+        result[f'CSI@{suffix}'] = csi_from_counts(h, m, fa)
+        result[f'THR{suffix}_csi_hits'] = h
+        result[f'THR{suffix}_csi_misses'] = m
+        result[f'THR{suffix}_csi_fa'] = fa
+        result[f'THR{suffix}_csi_cn'] = cn
+
     for threshold in cfg.categorical_thresholds:
         suffix = str(int(threshold)) if float(threshold).is_integer() else str(threshold)
-        h, m, fa, cn = contingency_counts(p, y, threshold)
-        result[f'CSI@{suffix}'] = csi_from_counts(h, m, fa)
+        h, m, fa, cn = counts_by_threshold[threshold]
         result[f'ETS@{suffix}'] = ets_from_counts(h, m, fa, cn)
-        result[f'THR{suffix}_hits'] = h
-        result[f'THR{suffix}_misses'] = m
-        result[f'THR{suffix}_fa'] = fa
-        result[f'THR{suffix}_cn'] = cn
-    fss_scores = compute_fss(prediction, target, valid, cfg.csi_threshold_mmh, cfg.fss_window_sizes)
-    result.update(fss_scores)
+        result[f'THR{suffix}_ets_hits'] = h
+        result[f'THR{suffix}_ets_misses'] = m
+        result[f'THR{suffix}_ets_fa'] = fa
+        result[f'THR{suffix}_ets_cn'] = cn
+
     return result
 
-def detect_storms_two_level(rain_mm_h, operational_thr, extreme_thr, min_pixels=200, disk_size=4, min_area_km2=200.0, max_area_km2=10000.0, pixel_area_km2=1.0):
-    from skimage.morphology import closing, remove_small_objects, disk as sk_disk
-    from scipy.ndimage import label as sp_label
+
+def compute_pooled_mean(metrics_df, cfg):
+    ratio_cols = ['MAE', 'MSE', 'RMSE', 'PSNR', 'SSIM']
+    csi_thresholds = cfg.csi_threshold_mmh
+    if np.isscalar(csi_thresholds):
+        csi_thresholds = [csi_thresholds]
+
+    rows = []
+    for (model, horizon), g in metrics_df.groupby(['model', 'horizon_min']):
+        row = {'model': model, 'horizon_min': horizon, 'n_samples': len(g)}
+        for col in ratio_cols:
+            row[col] = g[col].mean()
+
+        csi_vals = []
+        for threshold in csi_thresholds:
+            suffix = str(int(threshold)) if float(threshold).is_integer() else str(threshold)
+            h = g[f'THR{suffix}_csi_hits'].sum()
+            m = g[f'THR{suffix}_csi_misses'].sum()
+            fa = g[f'THR{suffix}_csi_fa'].sum()
+            csi = csi_from_counts(h, m, fa)
+            row[f'CSI@{suffix}'] = csi
+            csi_vals.append(csi)
+
+        ets_vals = []
+        for threshold in cfg.categorical_thresholds:
+            suffix = str(int(threshold)) if float(threshold).is_integer() else str(threshold)
+            h = g[f'THR{suffix}_ets_hits'].sum()
+            m = g[f'THR{suffix}_ets_misses'].sum()
+            fa = g[f'THR{suffix}_ets_fa'].sum()
+            cn = g[f'THR{suffix}_ets_cn'].sum()
+            ets = ets_from_counts(h, m, fa, cn)
+            row[f'ETS@{suffix}'] = ets
+            ets_vals.append(ets)
+
+        row['CSI-M'] = float(np.nanmean(csi_vals)) if csi_vals else float('nan')
+        row['ETS-M'] = float(np.nanmean(ets_vals)) if ets_vals else float('nan')
+        rows.append(row)
+    return pd.DataFrame(rows)
+
+
+def _cosine_window_1d(size, device):
+    t = torch.linspace(0.0, 1.0, size, device=device)
+    return 0.5 - 0.5 * torch.cos(2.0 * np.pi * t)
+
+
+def _make_blend_window(patch_size, device):
+    w1d = _cosine_window_1d(patch_size, device)
+    return w1d.unsqueeze(0) * w1d.unsqueeze(1)
+
+
+def _get_patch_starts(full_size, patch_size, overlap):
+    stride = patch_size - overlap
+    starts = list(range(0, full_size - patch_size, stride))
+    last   = full_size - patch_size
+    if not starts or starts[-1] != last:
+        starts.append(last)
+    starts = [max(0, s) for s in starts]
+    return sorted(set(starts))
+
+
+def patch_inference(model, input_tensor, n_horizons, patch_size, overlap, blend, device):
+    input_tensor = input_tensor.to(device)
+    _, C, H, W   = input_tensor.shape
+
+    if H == patch_size and W == patch_size:
+        with torch.no_grad():
+            return model(input_tensor).cpu()
+
+    pad_h = max(0, patch_size - H)
+    pad_w = max(0, patch_size - W)
+    if pad_h > 0 or pad_w > 0:
+        input_tensor = F.pad(input_tensor, (0, pad_w, 0, pad_h), mode='reflect')
+        _, _, H, W   = input_tensor.shape
+
+    accum  = torch.zeros(1, n_horizons, H, W, device=device)
+    weight = torch.zeros(1, 1,          H, W, device=device)
+
+    blend_win = _make_blend_window(patch_size, device).unsqueeze(0).unsqueeze(0)
+
+    row_starts = _get_patch_starts(H, patch_size, overlap)
+    col_starts = _get_patch_starts(W, patch_size, overlap)
+    n_patches  = len(row_starts) * len(col_starts)
+
+    for r in row_starts:
+        for c in col_starts:
+            patch = input_tensor[:, :, r:r+patch_size, c:c+patch_size]
+            with torch.no_grad():
+                pred_patch = model(patch)
+            if blend == 'cosine':
+                w = blend_win.expand(1, n_horizons, patch_size, patch_size)
+                accum[:, :, r:r+patch_size, c:c+patch_size]  += pred_patch * w
+                weight[:, :, r:r+patch_size, c:c+patch_size] += blend_win
+            else:
+                accum[:, :, r:r+patch_size, c:c+patch_size]  += pred_patch
+                weight[:, :, r:r+patch_size, c:c+patch_size] += 1.0
+
+    stitched = (accum / weight.clamp(min=1e-6)).cpu()
+    if pad_h > 0 or pad_w > 0:
+        stitched = stitched[:, :, :H - pad_h, :W - pad_w]
+    return stitched
+
+
+def run_model(model, input_tensor, n_horizons, cfg):
+    if cfg.patch_size is not None:
+        return patch_inference(model, input_tensor, n_horizons,
+                               cfg.patch_size, cfg.patch_overlap,
+                               cfg.patch_blend, cfg.device)
+    with torch.no_grad():
+        return model(input_tensor.to(cfg.device)).cpu()
+
+
+class ConvLSTMWrapper(nn.Module):
+    def __init__(self, num_channels, num_timesteps, n_horizons):
+        super().__init__()
+        self.num_channels  = num_channels
+        self.num_timesteps = num_timesteps
+        encoder        = Encoder(convlstm_encoder_params[0], convlstm_encoder_params[1])
+        decoder_params = get_convlstm_decoder_params(n_horizons)
+        decoder        = Decoder(decoder_params[0], decoder_params[1])
+        self.model     = ED(encoder, decoder)
+
+    def forward(self, x):
+        B, TC, H, W = x.shape
+        x   = x.view(B, self.num_timesteps, self.num_channels, H, W)
+        out = self.model(x)
+        return out[:, 0, :, :, :].contiguous()
+
+
+class SimVPWrapper(nn.Module):
+    def __init__(self, num_channels, num_timesteps, n_horizons,
+                 hid_S=64, hid_T=256, N_S=4, N_T=8, incep_ker=None, groups=8):
+        super().__init__()
+        if incep_ker is None:
+            incep_ker = [3, 5, 7, 11]
+        self.num_channels  = num_channels
+        self.num_timesteps = num_timesteps
+        shape_in = (num_timesteps, num_channels, 256, 256)
+        self.simvp   = SimVP(shape_in, hid_S=hid_S, hid_T=hid_T,
+                             N_S=N_S, N_T=N_T, incep_ker=incep_ker, groups=groups)
+        self.readout = nn.Conv2d(num_timesteps * num_channels, n_horizons,
+                                 kernel_size=1, stride=1, padding=0)
+
+    def forward(self, x):
+        B, TC, H, W = x.shape
+        x   = x.view(B, self.num_timesteps, self.num_channels, H, W)
+        out = self.simvp(x)
+        out = out.reshape(B, self.num_timesteps * self.num_channels, H, W)
+        return self.readout(out).contiguous()
+
+
+class EarthFormerWrapper(nn.Module):
+    def __init__(self, num_channels, num_timesteps, n_horizons, model_cfg):
+        super().__init__()
+        self.num_channels  = num_channels
+        self.num_timesteps = num_timesteps
+        enc_depth      = list(model_cfg['enc_depth'])
+        dec_depth      = list(model_cfg['dec_depth'])
+        num_enc_blocks = len(enc_depth)
+        num_dec_blocks = len(dec_depth)
+        self.model = CuboidTransformerModel(
+            input_shape  = tuple(model_cfg['input_shape']),
+            target_shape = tuple(model_cfg['target_shape']),
+            base_units   = model_cfg['base_units'],
+            block_units  = model_cfg.get('block_units', None),
+            scale_alpha  = model_cfg['scale_alpha'],
+            enc_depth    = enc_depth,
+            dec_depth    = dec_depth,
+            enc_attn_patterns       = [model_cfg['self_pattern']]       * num_enc_blocks,
+            dec_self_attn_patterns  = [model_cfg['cross_self_pattern']] * num_dec_blocks,
+            dec_cross_attn_patterns = [model_cfg['cross_pattern']]      * num_dec_blocks,
+            enc_cuboid_size          = [(4,4,4)]       * num_enc_blocks,
+            enc_cuboid_strategy      = [('l','l','l')] * num_enc_blocks,
+            enc_shift_size           = [(0,0,0)]        * num_enc_blocks,
+            dec_self_cuboid_size     = [(4,4,4)]        * num_dec_blocks,
+            dec_self_cuboid_strategy = [('l','l','l')]  * num_dec_blocks,
+            dec_self_shift_size      = [(0,0,0)]         * num_dec_blocks,
+            dec_cross_cuboid_hw      = [(4,4)]           * num_dec_blocks,
+            dec_cross_cuboid_strategy= [('l','l')]       * num_dec_blocks,
+            dec_cross_shift_hw       = [(0,0)]           * num_dec_blocks,
+            dec_cross_n_temporal     = [2]               * num_dec_blocks,
+            dec_cross_last_n_frames  = model_cfg['dec_cross_last_n_frames'],
+            enc_use_inter_ffn          = model_cfg['enc_use_inter_ffn'],
+            dec_use_inter_ffn          = model_cfg['dec_use_inter_ffn'],
+            dec_hierarchical_pos_embed = model_cfg['dec_hierarchical_pos_embed'],
+            dec_use_first_self_attn    = model_cfg['dec_use_first_self_attn'],
+            dec_cross_start            = 0,
+            num_heads  = model_cfg['num_heads'],
+            attn_drop  = model_cfg['attn_drop'],
+            proj_drop  = model_cfg['proj_drop'],
+            ffn_drop   = model_cfg['ffn_drop'],
+            downsample           = model_cfg['downsample'],
+            downsample_type      = model_cfg['downsample_type'],
+            upsample_type        = model_cfg['upsample_type'],
+            upsample_kernel_size = model_cfg.get('upsample_kernel_size', 3),
+            initial_downsample_type       = model_cfg['initial_downsample_type'],
+            initial_downsample_activation = model_cfg['initial_downsample_activation'],
+            initial_downsample_scale      = model_cfg.get('initial_downsample_scale', 1),
+            initial_downsample_conv_layers  = model_cfg.get('initial_downsample_conv_layers', 2),
+            final_upsample_conv_layers      = model_cfg.get('final_upsample_conv_layers', 2),
+            initial_downsample_stack_conv_num_layers     = model_cfg['initial_downsample_stack_conv_num_layers'],
+            initial_downsample_stack_conv_dim_list       = list(model_cfg['initial_downsample_stack_conv_dim_list']),
+            initial_downsample_stack_conv_downscale_list = list(model_cfg['initial_downsample_stack_conv_downscale_list']),
+            initial_downsample_stack_conv_num_conv_list  = list(model_cfg['initial_downsample_stack_conv_num_conv_list']),
+            num_global_vectors     = model_cfg['num_global_vectors'],
+            use_dec_self_global    = model_cfg['use_dec_self_global'],
+            dec_self_update_global = model_cfg['dec_self_update_global'],
+            use_dec_cross_global   = model_cfg['use_dec_cross_global'],
+            use_global_vector_ffn  = model_cfg['use_global_vector_ffn'],
+            use_global_self_attn   = model_cfg['use_global_self_attn'],
+            separate_global_qkv    = model_cfg['separate_global_qkv'],
+            global_dim_ratio       = model_cfg['global_dim_ratio'],
+            z_init_method            = model_cfg['z_init_method'],
+            ffn_activation           = model_cfg['ffn_activation'],
+            gated_ffn                = model_cfg['gated_ffn'],
+            norm_layer               = model_cfg['norm_layer'],
+            padding_type             = model_cfg['padding_type'],
+            pos_embed_type           = model_cfg['pos_embed_type'],
+            use_relative_pos         = model_cfg['use_relative_pos'],
+            self_attn_use_final_proj = model_cfg['self_attn_use_final_proj'],
+            checkpoint_level         = model_cfg['checkpoint_level'],
+            attn_linear_init_mode    = model_cfg['attn_linear_init_mode'],
+            ffn_linear_init_mode     = model_cfg['ffn_linear_init_mode'],
+            conv_init_mode           = model_cfg['conv_init_mode'],
+            down_up_linear_init_mode = model_cfg['down_up_linear_init_mode'],
+            norm_init_mode           = model_cfg['norm_init_mode'],
+        )
+
+    def forward(self, x):
+        B, TC, H, W = x.shape
+        x   = x.view(B, self.num_timesteps, self.num_channels, H, W)
+        x   = rearrange(x, 'b t c h w -> b t h w c')
+        out = self.model(x)
+        out = out.squeeze(-1)
+        return torch.clamp(out, -0.5, 1.5)
+
+
+class VPTRWrapper(nn.Module):
+    def __init__(self, num_channels, num_timesteps=5, n_horizons=4,
+                 feat_dim=192, n_downsampling=3, encH=32, encW=32,
+                 d_model=192, nhead=4, num_encoder_layers=2, num_decoder_layers=2,
+                 dropout=0.1, window_size=4, Spatial_FFN_hidden_ratio=4, rpe=True):
+        super().__init__()
+        self.num_channels  = num_channels
+        self.num_timesteps = num_timesteps
+        self.n_horizons    = n_horizons
+        self.encoder = VPTREnc(img_channels=num_channels, feat_dim=feat_dim,
+                               n_downsampling=n_downsampling)
+        self.former  = VPTRFormerNAR(num_past_frames=num_timesteps,
+                                     num_future_frames=n_horizons,
+                                     encH=encH, encW=encW, d_model=d_model,
+                                     nhead=nhead, num_encoder_layers=num_encoder_layers,
+                                     num_decoder_layers=num_decoder_layers,
+                                     dropout=dropout, window_size=window_size,
+                                     Spatial_FFN_hidden_ratio=Spatial_FFN_hidden_ratio,
+                                     rpe=rpe)
+        self.decoder  = VPTRDec(img_channels=num_channels, feat_dim=feat_dim,
+                                n_downsampling=n_downsampling, out_layer='Sigmoid')
+        self.out_proj = nn.Conv2d(num_channels, 1, kernel_size=1, bias=True)
+
+    def forward(self, x):
+        B, TC, H, W = x.shape
+        x = x.view(B, self.num_timesteps, self.num_channels, H, W)
+        past_feats  = self.encoder(x)
+        pred_feats  = self.former(past_feats)
+        pred_frames = self.decoder(pred_feats)
+        B2, T2, C2, H2, W2 = pred_frames.shape
+        out = self.out_proj(pred_frames.view(B2 * T2, C2, H2, W2))
+        return out.view(B2, T2, H2, W2).contiguous()
+
+
+def _strip_dp(sd):
+    return {k.replace('module.', ''): v for k, v in sd.items()}
+
+
+def load_all_models(cfg):
+    n_ch  = 1
+    n_hor = len(cfg.horizons)
+    T     = cfg.num_in_frames
+    models = {}
+
+    ckpt = torch.load(cfg.smaat_checkpoint, map_location='cpu', weights_only=False)
+    m = SmaAt_UNet(n_channels=T*n_ch, n_classes=n_hor,
+                   kernels_per_layer=cfg.smaat_kernels_per_layer,
+                   bilinear=cfg.smaat_bilinear,
+                   reduction_ratio=cfg.smaat_reduction_ratio)
+    m.load_state_dict(_strip_dp(ckpt['model_state_dict']), strict=False)
+    models['smaat_unet'] = m.to(cfg.device).eval()
+
+    ckpt = torch.load(cfg.convlstm_checkpoint, map_location='cpu', weights_only=False)
+    m = ConvLSTMWrapper(num_channels=n_ch, num_timesteps=T, n_horizons=n_hor)
+    m.load_state_dict(_strip_dp(ckpt['model_state_dict']), strict=False)
+    models['convlstm'] = m.to(cfg.device).eval()
+
+    ckpt = torch.load(cfg.simvp_checkpoint, map_location='cpu', weights_only=False)
+    m = SimVPWrapper(num_channels=n_ch, num_timesteps=T, n_horizons=n_hor,
+                     hid_S=cfg.hid_S, hid_T=cfg.hid_T, N_S=cfg.N_S, N_T=cfg.N_T,
+                     incep_ker=cfg.incep_ker, groups=cfg.simvp_groups)
+    m.load_state_dict(_strip_dp(ckpt['model_state_dict']), strict=False)
+    models['simvp'] = m.to(cfg.device).eval()
+
+    ckpt      = torch.load(cfg.earthformer_checkpoint, map_location='cpu', weights_only=False)
+    ef_oc     = OmegaConf.load(cfg.earthformer_config_yml)
+    model_cfg = OmegaConf.to_object(ef_oc.model)
+    m = EarthFormerWrapper(num_channels=n_ch, num_timesteps=T,
+                           n_horizons=n_hor, model_cfg=model_cfg)
+    m.load_state_dict(_strip_dp(ckpt['model_state_dict']), strict=False)
+    models['earthformer'] = m.to(cfg.device).eval()
+
+    ckpt = torch.load(cfg.vptr_checkpoint, map_location='cpu', weights_only=False)
+    m = VPTRWrapper(num_channels=n_ch, num_timesteps=T, n_horizons=n_hor,
+                    feat_dim=cfg.vptr_feat_dim, n_downsampling=cfg.vptr_n_downsampling,
+                    encH=cfg.vptr_encH, encW=cfg.vptr_encW, d_model=cfg.vptr_d_model,
+                    nhead=cfg.vptr_nhead, num_encoder_layers=cfg.vptr_num_encoder_layers,
+                    num_decoder_layers=cfg.vptr_num_decoder_layers,
+                    dropout=cfg.vptr_dropout, window_size=cfg.vptr_window_size,
+                    Spatial_FFN_hidden_ratio=cfg.vptr_spatial_ffn_ratio, rpe=cfg.vptr_rpe)
+    m.load_state_dict(_strip_dp(ckpt['model_state_dict']), strict=False)
+    models['vptr'] = m.to(cfg.device).eval()
+
+    return models
+
+
+def compute_ensemble(preds, horizons, ensemble_weights=None):
+    if ensemble_weights is None:
+        weights = {k: 1.0 for k in REAL_MODEL_KEYS}
+    else:
+        weights = ensemble_weights
+
+    total_weight = sum(weights[k] for k in REAL_MODEL_KEYS)
+
+    ensemble = {}
+    for h in horizons:
+        weighted_sum = sum(
+            weights[k] * preds[k][h]
+            for k in REAL_MODEL_KEYS
+            if k in preds
+        )
+        n_available = sum(1 for k in REAL_MODEL_KEYS if k in preds)
+        w_sum       = sum(weights[k] for k in REAL_MODEL_KEYS if k in preds)
+        ensemble[h] = weighted_sum / w_sum
+
+    return ensemble
+
+
+def load_full_sample(row, cfg):
+    dt            = datetime.strptime(row['datetime'], '%Y-%m-%d %H:%M:%S')
+    history_times = get_history_times(dt, cfg.num_in_frames, cfg.stride_minutes)
+    target_times  = get_target_times(dt, cfg.horizons)
+
+    radar_planes = []
+    for t in history_times:
+        arr = np.load(radar_path(cfg.radar_base, t)).astype(np.float32)
+        arr = np.nan_to_num(arr, nan=0.0, posinf=0.0, neginf=0.0)
+        arr = softlog_transform(np.clip(arr, 0.0, CLIP_MAX_MMH))
+        radar_planes.append(arr)
+
+    input_np     = np.stack(radar_planes, axis=0).astype(np.float32)
+    input_np     = np.nan_to_num(input_np, nan=0.0, posinf=0.0, neginf=0.0)
+    input_tensor = torch.from_numpy(input_np).unsqueeze(0).float()
+
+    targets_list, masks_list = [], []
+    for t in target_times:
+        arr  = np.load(radar_path(cfg.radar_base, t)).astype(np.float32)
+        mask = np.isfinite(arr).astype(np.float32)
+        arr  = np.nan_to_num(arr, nan=0.0, posinf=0.0, neginf=0.0)
+        arr  = softlog_transform(np.clip(arr, 0.0, CLIP_MAX_MMH))
+        targets_list.append(arr)
+        masks_list.append(mask)
+
+    return input_tensor, np.stack(targets_list), np.stack(masks_list), dt
+
+
+def detect_storms_two_level(rain_mm_h, operational_thr, extreme_thr,
+                             min_pixels=10, disk_size=4,
+                             min_area_km2=10.0, max_area_km2=100000.0,
+                             pixel_area_km2=1.0):
     valid = np.isfinite(rain_mm_h)
     if valid.sum() == 0:
         empty = np.zeros_like(rain_mm_h, dtype=bool)
-        return (empty, empty, 0, 0)
+        return empty, empty, 0, 0
     mask_op = valid & (rain_mm_h >= operational_thr)
     if mask_op.sum() == 0:
         empty = np.zeros_like(rain_mm_h, dtype=bool)
-        return (empty, empty, 0, 0)
-    mask_op = closing(mask_op, sk_disk(disk_size))
-    labeled_op, n_c = sp_label(mask_op)
-    final_op = np.zeros_like(mask_op, dtype=bool)
-    n_op = 0
+        return empty, empty, 0, 0
+    mask_op         = closing(mask_op, disk(disk_size))
+    labeled_op, n_c = label(mask_op)
+    final_op        = np.zeros_like(mask_op, dtype=bool)
+    n_op            = 0
     for rid in range(1, n_c + 1):
         region = labeled_op == rid
         if min_area_km2 <= region.sum() * pixel_area_km2 <= max_area_km2:
@@ -411,406 +643,306 @@ def detect_storms_two_level(rain_mm_h, operational_thr, extreme_thr, min_pixels=
             n_op += 1
     mask_ext = final_op & (rain_mm_h >= extreme_thr)
     if mask_ext.sum() == 0:
-        return (final_op, mask_ext, n_op, 0)
-    mask_ext = closing(mask_ext, sk_disk(2))
+        return final_op, mask_ext, n_op, 0
+    mask_ext = closing(mask_ext, disk(2))
     mask_ext = remove_small_objects(mask_ext, min_size=50)
-    _, n_ext = sp_label(mask_ext)
-    return (final_op, mask_ext, n_op, n_ext)
+    _, n_ext = label(mask_ext)
+    return final_op, mask_ext, n_op, n_ext
 
-def render_precip(ax, image, valid_mask=None, operational_thr=None, extreme_thr=None):
+
+def _render_image(ax, img_mm, storm_op, storm_ext, n_op, n_ext):
     ax.set_facecolor(BG_COLOR)
-    display_image = np.ma.masked_less(image, 0.1)
-    if valid_mask is not None:
-        display_image = np.ma.masked_where(~valid_mask, display_image)
-    im = ax.imshow(display_image, cmap=RAIN_CMAP, norm=RAIN_NORM, interpolation='nearest')
-    if operational_thr is not None and extreme_thr is not None:
-        field = np.where(valid_mask, image, np.nan) if valid_mask is not None else image
-        op, ext, n_op, n_ext = detect_storms_two_level(field, operational_thr, extreme_thr)
-        if n_op > 0:
-            ov = np.zeros((*op.shape, 4))
-            ov[op] = PALETTE.OP_OVERLAY_RGBA
-            ax.imshow(ov, interpolation='nearest')
-        if n_ext > 0:
-            ov = np.zeros((*ext.shape, 4))
-            ov[ext] = PALETTE.EXT_OVERLAY_RGBA
-            ax.imshow(ov, interpolation='nearest')
-    ax.axis('off')
+    im = ax.imshow(np.ma.masked_invalid(img_mm),
+                   cmap=RAIN_CMAP, norm=RAIN_NORM, interpolation="nearest")
+    if n_op > 0:
+        ov = np.zeros((*storm_op.shape, 4))
+        ov[storm_op] = [1.0, 0.6, 0.0, 0.25]
+        ax.imshow(ov, interpolation="nearest")
+    if n_ext > 0:
+        ov = np.zeros((*storm_ext.shape, 4))
+        ov[storm_ext] = [1.0, 0.0, 1.0, 0.35]
+        ax.imshow(ov, interpolation="nearest")
+    ax.axis("off")
     return im
 
-def save_comparison_figure(gt, radar_preds, multimodal_preds, masks, dt, cfg, sample_index, t0_frame=None, t0_mask=None, horizons_to_show=None, filename_suffix=''):
-    RADAR_COLOR = PALETTE.RADAR_COLOR
-    MULTIMODAL_COLOR = PALETTE.MULTIMODAL_COLOR
-    GT_COLOR = PALETTE.GT_COLOR
-    fig = plt.figure(figsize=(20, 12), facecolor='white')
-    show_t0 = t0_frame is not None
-    base_horizons = horizons_to_show if horizons_to_show is not None else cfg.horizons
-    display_horizons = ([0] if show_t0 else []) + list(base_horizons)
-    n_cols = len(display_horizons)
-    gs = fig.add_gridspec(3, n_cols + 1, width_ratios=[1] * n_cols + [0.055], left=0.1, right=0.94, bottom=0.08, top=0.86, hspace=0.2, wspace=0.05)
-    last_im = None
-    for col, h in enumerate(display_horizons):
-        ax = fig.add_subplot(gs[0, col])
-        if h == 0:
-            panel_img = t0_frame
-            panel_mask = t0_mask
-        else:
-            panel_img = gt[h]
-            panel_mask = masks[h]
-        last_im = render_precip(ax, panel_img, valid_mask=panel_mask, operational_thr=cfg.operational_thr, extreme_thr=cfg.extreme_thr)
-        target_time = dt + timedelta(minutes=h)
-        if h == 0:
-            title_text = 'Ground Truth  |  Analysis (t+0)\n' + target_time.strftime('%Y-%m-%d %H:%M')
-        else:
-            title_text = f'Ground Truth  |  GT t+{h}min\n' + target_time.strftime('%Y-%m-%d %H:%M')
-        ax.set_title(title_text, fontsize=9, fontweight='bold', pad=10)
-    for col, h in enumerate(display_horizons):
-        ax = fig.add_subplot(gs[1, col])
-        if h == 0:
-            panel_img = t0_frame
-            panel_mask = t0_mask
-        else:
-            panel_img = radar_preds[h]
-            panel_mask = masks[h]
-        render_precip(ax, panel_img, valid_mask=panel_mask, operational_thr=cfg.operational_thr, extreme_thr=cfg.extreme_thr)
-        target_time = dt + timedelta(minutes=h)
-        if h == 0:
-            title_text = 'PySteps Radar  |  Analysis (t+0)\n' + target_time.strftime('%Y-%m-%d %H:%M')
-        else:
-            title_text = f'PySteps Radar  |  Pred t+{h}min\n' + target_time.strftime('%Y-%m-%d %H:%M')
-        ax.set_title(title_text, fontsize=9, fontweight='bold', color=RADAR_COLOR, pad=10)
-    for col, h in enumerate(display_horizons):
-        ax = fig.add_subplot(gs[2, col])
-        if h == 0:
-            panel_img = t0_frame
-            panel_mask = t0_mask
-        else:
-            panel_img = multimodal_preds[h]
-            panel_mask = masks[h]
-        render_precip(ax, panel_img, valid_mask=panel_mask, operational_thr=cfg.operational_thr, extreme_thr=cfg.extreme_thr)
-        target_time = dt + timedelta(minutes=h)
-        if h == 0:
-            title_text = 'PySteps Multimodal  |  Analysis (t+0)\n' + target_time.strftime('%Y-%m-%d %H:%M')
-        else:
-            title_text = f'PySteps Multimodal  |  Pred t+{h}min\n' + target_time.strftime('%Y-%m-%d %H:%M')
-        ax.set_title(title_text, fontsize=9, fontweight='bold', color=MULTIMODAL_COLOR, pad=10)
-    fig.text(0.055, 0.76, 'Ground\nTruth', ha='center', va='center', fontsize=14, fontweight='bold', color=GT_COLOR)
-    fig.text(0.055, 0.5, 'PySteps\nRadar', ha='center', va='center', fontsize=14, fontweight='bold', color=RADAR_COLOR)
-    fig.text(0.055, 0.245, 'PySteps\nMultimodal', ha='center', va='center', fontsize=14, fontweight='bold', color=MULTIMODAL_COLOR)
-    cbar_ax = fig.add_subplot(gs[:, n_cols])
-    cbar = fig.colorbar(last_im, cax=cbar_ax, ticks=RAIN_LEVELS, spacing='proportional')
-    cbar.ax.tick_params(labelsize=8)
-    cbar.set_label('mm / h', fontsize=10, fontweight='bold')
-    cbar_ax.axhline(y=cfg.operational_thr, linestyle='--', linewidth=1.3, color='#f0a000')
-    cbar_ax.annotate(f'OPR\n{cfg.operational_thr:.0f}', xy=(1.15, cfg.operational_thr), xycoords=('axes fraction', 'data'), fontsize=7, color='#d99200', fontweight='bold', va='center', bbox=dict(boxstyle='round,pad=0.2', fc='white', ec='#d99200', lw=0.8))
-    cbar_ax.axhline(y=cfg.extreme_thr, linestyle='--', linewidth=1.3, color='#dd5500')
-    cbar_ax.annotate(f'EXT\n{cfg.extreme_thr:.0f}', xy=(1.15, cfg.extreme_thr), xycoords=('axes fraction', 'data'), fontsize=7, color='#dd5500', fontweight='bold', va='center', bbox=dict(boxstyle='round,pad=0.2', fc='white', ec='#dd5500', lw=0.8))
-    fig.suptitle('Comparison of Ground Truth and Lucas-Kanade Extrapolation Predictions', fontsize=17, fontweight='bold', y=0.98)
-    handles = [mpatches.Patch(color=GT_COLOR, label='Ground Truth'), mpatches.Patch(color=RADAR_COLOR, label='PySteps Radar'), mpatches.Patch(color=MULTIMODAL_COLOR, label='PySteps Multimodal (Radar+CH7+CH9)'), mpatches.Patch(color=PALETTE.OP_LEGEND_RGBA, label=f'Operational >={cfg.operational_thr:.0f} mm/h'), mpatches.Patch(color=PALETTE.EXT_LEGEND_RGBA, label=f'Extreme >={cfg.extreme_thr:.0f} mm/h')]
-    fig.legend(handles=handles, loc='lower center', ncol=5, fontsize=8, frameon=True, bbox_to_anchor=(0.52, 0.025))
-    output_path = os.path.join(cfg.out_dir, f"pysteps_lk_extrapolation_comparison_sample{sample_index:03d}_{dt.strftime('%Y-%m-%d')}{filename_suffix}.png")
-    fig.savefig(output_path, dpi=180, bbox_inches='tight', facecolor='white')
+
+def _build_title(kind, model_label, h, ts, p99, mae, n_op, n_ext, metrics_flag):
+    if kind == 'gt':
+        line1 = f"{model_label}  |  GT t+{h}min"
+        line2 = (f"P99={p99:.1f}  Conv={n_op}  Ext={n_ext}"
+                 if metrics_flag else ts.strftime('%Y-%m-%d %H:%M'))
+    else:
+        line1 = f"{model_label}  |  Pred t+{h}min"
+        line2 = (f"P99={p99:.1f}  MAE={mae:.2f} mm/h"
+                 if metrics_flag else ts.strftime('%Y-%m-%d %H:%M'))
+    return f"{line1}\n{line2}"
+
+
+def save_single_sample(sd, cfg, out_path, sample_idx):
+    dt        = sd['dt']
+    gt_mm     = sd['gt_mm']
+    masks     = sd['masks']
+    preds_all = sd['preds']
+    horizons  = cfg.horizons
+    n_hor     = len(horizons)
+    metrics_flag = getattr(cfg, 'show_storm_metrics', False)
+
+    N_IMG_COLS = n_hor * 2
+    N_COLS     = N_IMG_COLS + 1
+    n_rows     = len(MODELS)
+
+    FIG_W = 4.2 * N_IMG_COLS + 1.0
+    FIG_H = 3.8 * n_rows
+
+    fig = plt.figure(figsize=(FIG_W, FIG_H), facecolor="#1a1a1a")
+
+    gs = gridspec.GridSpec(
+        n_rows, N_COLS, figure=fig,
+        width_ratios=[1.0] * N_IMG_COLS + [0.03],
+        hspace=0.10, wspace=0.04,
+        left=0.02, right=0.97, top=0.97, bottom=0.03
+    )
+
+    fig.suptitle(
+        f"Full Image Inference  |  Multi-Model Comparison  |  "
+        f"Sample #{sample_idx+1}  |  {str(dt)[:16]}  |  P99={sd['p99']:.2f} mm/h",
+        color="white", fontsize=12, fontweight="bold", y=0.995
+    )
+
+    last_im      = None
+    target_times = {h: dt + timedelta(minutes=h) for h in horizons}
+
+    for m_idx, minfo in enumerate(MODELS):
+        mkey     = minfo['key']
+        mlabel   = minfo['label']
+        mcolor   = minfo['color']
+        pred_mm  = preds_all.get(mkey, None)
+
+        for h_idx, h in enumerate(horizons):
+            valid = masks[h] > 0.5
+            ts    = target_times[h]
+
+            gt_data = np.where(valid & (gt_mm[h] >= 0.1), gt_mm[h], np.nan)
+            gt_op, gt_ext, n_gt_op, n_gt_ext = detect_storms_two_level(
+                np.where(valid, gt_mm[h], np.nan),
+                cfg.operational_thr, cfg.extreme_thr,
+                cfg.storm_min_pixels, cfg.morphology_disk_size,
+                cfg.storm_min_area_km2, cfg.storm_max_area_km2, cfg.pixel_area_km2)
+            gt_p99 = (np.percentile(gt_data[np.isfinite(gt_data)], 99)
+                      if np.isfinite(gt_data).any() else 0.0)
+
+            col_gt = h_idx * 2
+            ax_gt  = fig.add_subplot(gs[m_idx, col_gt])
+            im = _render_image(ax_gt, gt_data, gt_op, gt_ext, n_gt_op, n_gt_ext)
+            last_im = im
+            ax_gt.set_title(
+                _build_title('gt', mlabel, h, ts,
+                             gt_p99, None, n_gt_op, n_gt_ext, metrics_flag),
+                color="white", fontsize=7, fontweight="bold", pad=3)
+            for sp in ax_gt.spines.values():
+                sp.set_edgecolor(mcolor); sp.set_linewidth(2.0)
+
+            col_pred = h_idx * 2 + 1
+            ax_pred  = fig.add_subplot(gs[m_idx, col_pred])
+
+            if pred_mm is not None:
+                pd_data = np.where(valid & (pred_mm[h] >= 0.1), pred_mm[h], np.nan)
+                pr_op, pr_ext, n_pr_op, n_pr_ext = detect_storms_two_level(
+                    np.where(valid, pred_mm[h], np.nan),
+                    cfg.operational_thr, cfg.extreme_thr,
+                    cfg.storm_min_pixels, cfg.morphology_disk_size,
+                    cfg.storm_min_area_km2, cfg.storm_max_area_km2, cfg.pixel_area_km2)
+                pd_p99 = (np.percentile(pd_data[np.isfinite(pd_data)], 99)
+                          if np.isfinite(pd_data).any() else 0.0)
+                mae = (float(np.abs(pred_mm[h][valid] - gt_mm[h][valid]).mean())
+                       if valid.any() else float('nan'))
+            else:
+                pd_data  = np.full_like(gt_mm[h], np.nan)
+                pr_op    = np.zeros_like(gt_mm[h], dtype=bool)
+                pr_ext   = np.zeros_like(gt_mm[h], dtype=bool)
+                n_pr_op  = n_pr_ext = 0
+                pd_p99   = 0.0
+                mae      = float('nan')
+
+            _render_image(ax_pred, pd_data, pr_op, pr_ext, n_pr_op, n_pr_ext)
+            ax_pred.set_title(
+                _build_title('pred', mlabel, h, ts,
+                             pd_p99, mae, n_pr_op, n_pr_ext, metrics_flag),
+                color=mcolor, fontsize=7, fontweight="bold", pad=3)
+            for sp in ax_pred.spines.values():
+                sp.set_edgecolor(mcolor); sp.set_linewidth(2.0)
+
+    if last_im is not None:
+        cbar_ax = fig.add_subplot(gs[:, -1])
+        cbar_ax.set_facecolor("#1a1a1a")
+        cbar = fig.colorbar(last_im, cax=cbar_ax, ticks=RAIN_LEVELS,
+                            spacing="proportional")
+        cbar.outline.set_edgecolor("#555555"); cbar.outline.set_linewidth(0.5)
+        cbar_ax.yaxis.set_ticks_position("left")
+        cbar_ax.yaxis.set_label_position("left")
+        cbar_ax.tick_params(axis="y", length=0, pad=4)
+        plt.setp(cbar_ax.get_yticklabels(),
+                 color="white", fontsize=7, fontfamily="monospace", fontweight="bold")
+        cbar_ax_r = cbar_ax.twinx()
+        cbar_ax_r.set_ylim(cbar_ax.get_ylim()); cbar_ax_r.set_yticks([])
+        cbar_ax_r.set_ylabel("mm / h", color="#cccccc", fontsize=8,
+                              fontweight="bold", labelpad=10,
+                              rotation=270, va="bottom")
+        cbar_ax_r.spines[:].set_visible(False)
+        for thr, badge, col in [
+            (cfg.operational_thr, f"OPR\n{cfg.operational_thr:.0f}", "#ffee00"),
+            (cfg.extreme_thr,     f"EXT\n{cfg.extreme_thr:.0f}",     "#ff6600"),
+        ]:
+            cbar_ax.axhline(y=thr, color=col, linewidth=1.2,
+                            linestyle="--", alpha=0.9,
+                            xmin=-0.5, xmax=1.2, clip_on=False)
+            cbar_ax.annotate(badge, xy=(1.15, thr),
+                             xycoords=("axes fraction", "data"),
+                             fontsize=6, fontweight="bold", color=col,
+                             va="center", ha="left",
+                             bbox=dict(boxstyle="round,pad=0.25",
+                                       fc="#1a1a1a", ec=col, lw=0.8))
+
+    legend_patches = [
+        mpatches.Patch(facecolor=m['color'], label=m['label']) for m in MODELS
+    ] + [
+        mpatches.Patch(facecolor=(1.0, 0.6, 0.0, 0.4),
+                       label=f"Operational >={cfg.operational_thr:.0f} mm/h"),
+        mpatches.Patch(facecolor=(1.0, 0.0, 1.0, 0.5),
+                       label=f"Extreme >={cfg.extreme_thr:.0f} mm/h"),
+    ]
+    fig.legend(handles=legend_patches, loc="lower center",
+               ncol=len(legend_patches), fontsize=7, framealpha=0.3,
+               facecolor="#333333", edgecolor="#555555", labelcolor="white",
+               bbox_to_anchor=(0.48, 0.0))
+
+    out_dir = os.path.dirname(out_path)
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
+    fig.savefig(out_path, dpi=150, bbox_inches="tight",
+                facecolor=fig.get_facecolor())
     plt.close(fig)
-    print(f'\n    Figure saved:\n    {output_path}')
 
-def process_one_sample(args):
-    sample_idx, row, cfg, channel_stats = args
-    results = []
-    print()
-    print('=' * 80)
-    print(f'SAMPLE {sample_idx + 1}')
-    print(f"Datetime: {row['datetime']}")
-    print('=' * 80)
-    try:
-        radar_history, radar_history_masks, satellite_history, gt, masks, dt, history_times, target_times = load_sample(row, cfg)
-    except Exception as error:
-        print(f'\nLOAD ERROR:\n{error}')
-        return results
-    print('\n    Historical observations:')
-    for t in history_times:
-        print(f"       {t.strftime('%Y-%m-%d %H:%M')}")
-    print('\n    LK extrapolation motion input:')
-    for t in history_times[-cfg.lk_num_frames:]:
-        print(f"       {t.strftime('%Y-%m-%d %H:%M')}")
-    print('\n    Targets:')
-    for horizon, t in zip(cfg.metric_horizons, target_times):
-        print(f"       +{horizon:02d}: {t.strftime('%Y-%m-%d %H:%M')}")
-    print(f'\n    Radar shape : {radar_history.shape}')
-    for ch in cfg.channels:
-        print(f'    {ch} shape   : {satellite_history[ch].shape}')
-    radar_hw = radar_history.shape[-2:]
-    for ch in cfg.channels:
-        sat_hw = satellite_history[ch].shape[-2:]
-        if sat_hw != radar_hw:
-            print(f'\nSHAPE ERROR: {ch} grid {sat_hw} does not match radar grid {radar_hw}. Use the regridded satellite data.')
-            return results
-    try:
-        radar_predictions, multimodal_predictions, radar_velocity, multimodal_velocity = run_both_baselines(radar_history, satellite_history, channel_stats, cfg)
-    except Exception as error:
-        print(f'\nFORECAST ERROR:\n{error}')
-        return results
-    if cfg.save_motion_diagnostics:
-        save_motion_diagnostic(radar_history[-1], radar_velocity, 'Radar', dt, cfg, sample_idx + 1)
-        save_motion_diagnostic(radar_history[-1], multimodal_velocity, 'Multimodal', dt, cfg, sample_idx + 1)
-    if cfg.save_overlay_diagnostics:
-        for model_name, predictions in [('PySteps_Radar', radar_predictions), ('PySteps_Multimodal', multimodal_predictions)]:
-            for horizon in cfg.overlay_diagnostic_horizons:
-                if horizon in predictions and horizon in gt:
-                    save_overlay_diagnostic(predictions[horizon], gt[horizon], masks[horizon], dt, cfg, sample_idx + 1, model_name, horizon)
-    print('\n' + '-' * 80)
-    print('METRICS')
-    print('-' * 80)
-    for model_name, predictions in [('PySteps_Radar', radar_predictions), ('PySteps_Multimodal', multimodal_predictions)]:
-        print(f'\n    {model_name}')
-        for horizon in cfg.metric_horizons:
-            metrics = compute_metrics(predictions[horizon], gt[horizon], masks[horizon], cfg)
-            if metrics is None:
-                continue
-            row_result = {'model': model_name, 'datetime': dt.strftime('%Y-%m-%d %H:%M:%S'), 'horizon_min': horizon}
-            row_result.update(metrics)
-            results.append(row_result)
-            thr_str = ' | '.join((f"CSI@{suffix}={metrics['CSI@' + suffix]:.4f}" for suffix in (str(int(t)) if float(t).is_integer() else str(t) for t in cfg.categorical_thresholds)))
-            ets_str = ' | '.join((f"ETS@{suffix}={metrics['ETS@' + suffix]:.4f}" for suffix in (str(int(t)) if float(t).is_integer() else str(t) for t in cfg.categorical_thresholds)))
-            print(f"       t+{horizon:02d} | MAE={metrics['MAE']:.4f} | SSIM={metrics['SSIM']:.4f} | {thr_str} | {ets_str} | FSS9={metrics.get('FSS9', float('nan')):.4f}")
-    should_save_image = cfg.save_images and (cfg.save_images_only_datetimes is None or row['datetime'] in cfg.save_images_only_datetimes)
-    if should_save_image:
-        save_comparison_figure(gt, radar_predictions, multimodal_predictions, masks, dt, cfg, sample_idx + 1, t0_frame=None, t0_mask=None, horizons_to_show=cfg.metric_horizons)
-    return results
-
-def compute_pooled_mean(metrics_df, cfg):
-    rows = []
-    ratio_cols = ['MAE', 'MSE', 'RMSE', 'PSNR', 'SSIM']
-    fss_cols = [f'FSS{w}' for w in cfg.fss_window_sizes]
-    ratio_cols = ratio_cols + fss_cols
-    for (model, horizon), g in metrics_df.groupby(['model', 'horizon_min']):
-        row = {'model': model, 'horizon_min': horizon, 'n_samples': len(g)}
-        for col in ratio_cols:
-            row[col] = g[col].mean()
-        csi_values, ets_values = ([], [])
-        for threshold in cfg.categorical_thresholds:
-            suffix = str(int(threshold)) if float(threshold).is_integer() else str(threshold)
-            h = g[f'THR{suffix}_hits'].sum()
-            m = g[f'THR{suffix}_misses'].sum()
-            fa = g[f'THR{suffix}_fa'].sum()
-            cn = g[f'THR{suffix}_cn'].sum()
-            csi_val = csi_from_counts(h, m, fa)
-            ets_val = ets_from_counts(h, m, fa, cn)
-            row[f'CSI@{suffix}'] = csi_val
-            row[f'ETS@{suffix}'] = ets_val
-            csi_values.append(csi_val)
-            ets_values.append(ets_val)
-        row['CSI_mean'] = float(np.nanmean(csi_values)) if csi_values else np.nan
-        row['ETS_mean'] = float(np.nanmean(ets_values)) if ets_values else np.nan
-        rows.append(row)
-    return pd.DataFrame(rows)
 
 def main():
-    parser = argparse.ArgumentParser(description='pySTEPS Radar + Multimodal Lucas-Kanade extrapolation baseline')
-    parser.add_argument('--num_samples', type=int, default=None, help=f'LEGACY MODE ONLY (Config.use_active_rain_subset=False). Number of samples to evaluate (default: Config.num_samples = {Config.num_samples!r}). Pass 0 to run the FULL filtered test set (every event passing select_on_the_hour/select_top_p99, equivalent to Config.num_samples=None) instead of a fixed count. Example: --num_samples 50')
-    parser.add_argument('--subset_size', type=int, default=None, help=f'How many active-rain sequences to evaluate (default: Config.subset_size = {Config.subset_size}). 1,000-2,000 is typically enough for CSI/ETS/MAE to converge while keeping LK extrapolation runtime tractable. Example: --subset_size 1500')
-    parser.add_argument('--active_rain_threshold', type=float, default=None, help=f'Minimum p99(x_seq) rain rate (mm/h) for a sequence to count as active rain rather than dry/clear-sky (default: Config.active_rain_threshold_mmh = {Config.active_rain_threshold_mmh}). Example: --active_rain_threshold 2.0')
-    parser.add_argument('--fresh_subset', action='store_true', help='Ignore any existing subset_manifest_csv and sample a new active-rain subset from scratch (overwriting the manifest file). Use this after deliberately changing --subset_size or --active_rain_threshold.')
-    parser.add_argument('--legacy_selection', action='store_true', help='Disable the active-rain subset entirely and fall back to the old select_top_p99/num_samples/select_on_the_hour behavior (Config.use_active_rain_subset=False).')
-    parser.add_argument('--num_processes', type=int, default=None, help=f'How many samples to process simultaneously, each in its own worker process (default: Config.num_processes = {Config.num_processes}, i.e. cpu_count()-1 on this machine). Set to 1 to run sequentially. Example: --num_processes 8')
-    parser.add_argument('--quick_test', type=int, default=None, help='Sanity-check mode: after normal sample selection (subset or legacy), keep only the first N selected samples, ignoring the resume cache. Use e.g. --quick_test 10 for a fast 10-sample check before committing to a full run. Does not touch subset_manifest_csv.')
-    parser.add_argument('--quick_test_outdir', type=str, default=None, help='Optional separate output dir for --quick_test runs, so quick-test CSVs never mix with / get "resumed" into your full-run CSVs. Defaults to <out_dir>_quicktest when --quick_test is set and this is not given.')
-    parser.add_argument('--motion_method', type=str, default=None, choices=['LK', 'VET', 'proesmans'], help=f"Optical-flow motion estimator (default: Config.motion_method = {Config.motion_method!r}). 'LK' is sparse corner-tracking + interpolation (original script); 'VET' and 'proesmans' are dense variational methods that tend to be more robust on precip fields with large uniform zero-background regions. Try --motion_method VET if LK is giving noisy motion diagnostics or weak CSI/ETS at short lead time.")
-    parser.add_argument('--extrap_interp_order', type=int, default=None, choices=[0, 1, 3], help=f'Interpolation order for semi-Lagrangian advection (default: Config.extrap_interp_order = {Config.extrap_interp_order}). 0=nearest-neighbor (preserves peak intensity, but can spatially smear/enlarge peaks under a spatially-varying velocity field -- blocky artifacts). 1=bilinear (a smoother middle ground). 3=cubic (pysteps default before our change; smooths peaks the most). Compare against the default if predicted extreme-value regions look larger/blockier than ground truth.')
-    parser.add_argument('--save_motion_diagnostics', action='store_true', help='Save a velocity-field quiver-plot PNG for every sample processed, so you can visually sanity-check the motion field (smooth and physically plausible vs noisy/near-zero). Recommended alongside --quick_test when comparing motion methods.')
-    parser.add_argument('--save_overlay_diagnostics', action='store_true', help='Save a PNG per sample/model/horizon (t+15, t+30 by default) with the ground-truth rain boundary drawn as a black contour on top of the predicted field. Makes exact displacement error directly visible -- use this to check whether "looks similar" cases are actually pixel-aligned or just visually close.')
-    parser.add_argument('--nowcast_method', type=str, default=None, choices=['extrapolation', 'sprog'], help=f"Forecast method (default: Config.nowcast_method = {Config.nowcast_method!r}). 'extrapolation' is pure translation (no intensity evolution). 'sprog' adds an AR(2) cascade decay model on top of the same velocity field -- usually a stronger classical baseline for CSI/ETS at higher thresholds. Requires ar_order+1 (default 3) precip frames, which lk_num_frames already provides.")
-    parser.add_argument('--sprog_ar_order', type=int, default=None, help=f'AR order for sprog (default: Config.sprog_ar_order = {Config.sprog_ar_order}). Needs ar_order+1 precip frames -- set Config.lk_num_frames >= ar_order+1. Try ar_order=4 (uses the full 5-frame history) if the default ar_order=2 (3 frames) gives an under-conditioned, over-damped AR fit.')
-    parser.add_argument('--lk_num_frames', type=int, default=None, help=f'History frames used for motion estimation (default: Config.lk_num_frames = {Config.lk_num_frames}). VET/proesmans are internally capped at the last 3 regardless of this value.')
-    parser.add_argument('--persistence_blend_max_horizon', type=int, default=None, help=f'Lead time (min) at which the persistence blend weight reaches 0 (default: Config.persistence_blend_max_horizon = {Config.persistence_blend_max_horizon}).')
-    parser.add_argument('--disable_persistence_blend', action='store_true', help='Turn off the persistence blend entirely (Config.use_persistence_blend = False), i.e. pure motion-based forecast with no t+0 blending.')
-    parser.add_argument('--out_dir', type=str, default=None, help='Override Config.out_dir entirely (takes priority over --quick_test_outdir). Use this for tuning sweeps so each trial writes to its own folder.')
-    parser.add_argument('--single_datetime', type=str, default=None, help="Evaluate exactly ONE sample by its exact 'YYYY-MM-DD HH:MM:SS' datetime string (must match a row in metadata_csv), bypassing all subset/legacy selection. Automatically saves its comparison figure. Example: --single_datetime '2024-06-30 01:00:00'")
-    parser.add_argument('--save_image_for', type=str, default=None, help="Run the NORMAL subset/legacy selection (e.g. --subset_size 300) but only save a comparison figure for the sample(s) matching this exact 'YYYY-MM-DD HH:MM:SS' datetime (comma-separate for more than one). Unlike --single_datetime, this still evaluates the full subset for metrics -- it just limits which figures get saved. Example: --save_image_for '2024-06-30 01:00:00'")
-    parser.add_argument('--subset_manifest_csv', type=str, default=None, help='Override Config.subset_manifest_csv. Point every trial in a tuning sweep at the SAME manifest so all configs are compared on identical samples.')
+    parser = argparse.ArgumentParser(description="Full-image multi-model DL nowcasting comparison + ensemble (radar-only)")
+    parser.add_argument("--num_samples", type=int, default=None)
+    parser.add_argument("--horizons", type=int, nargs="+", default=None)
+    parser.add_argument("--metadata_csv", type=str, default=None)
+    parser.add_argument("--out_dir", type=str, default=None)
+    parser.add_argument("--patch_size", type=int, default=None)
+    parser.add_argument("--patch_overlap", type=int, default=None)
+    parser.add_argument("--device", type=str, default=None, choices=["cuda", "cpu"])
+    parser.add_argument("--show_storm_metrics", action="store_true")
+    parser.add_argument("--rain_threshold", type=float, default=None)
+    parser.add_argument("--csi_threshold_mmh", type=float, nargs="+", default=None)
     args = parser.parse_args()
-    cfg = Config()
+
+    cfg = InferenceConfig()
+
     if args.num_samples is not None:
-        cfg.num_samples = None if args.num_samples == 0 else args.num_samples
-    if args.subset_size is not None:
-        cfg.subset_size = args.subset_size
-    if args.active_rain_threshold is not None:
-        cfg.active_rain_threshold_mmh = args.active_rain_threshold
-    if args.fresh_subset:
-        cfg.use_existing_subset_manifest = False
-    if args.legacy_selection:
-        cfg.use_active_rain_subset = False
-    if args.num_processes is not None:
-        cfg.num_processes = args.num_processes
-    if args.motion_method is not None:
-        cfg.motion_method = args.motion_method
-    if args.extrap_interp_order is not None:
-        cfg.extrap_interp_order = args.extrap_interp_order
-    if args.nowcast_method is not None:
-        cfg.nowcast_method = args.nowcast_method
-    if args.sprog_ar_order is not None:
-        cfg.sprog_ar_order = args.sprog_ar_order
-    if args.lk_num_frames is not None:
-        cfg.lk_num_frames = args.lk_num_frames
-    if args.persistence_blend_max_horizon is not None:
-        cfg.persistence_blend_max_horizon = args.persistence_blend_max_horizon
-    if args.disable_persistence_blend:
-        cfg.use_persistence_blend = False
-    if args.subset_manifest_csv is not None:
-        cfg.subset_manifest_csv = args.subset_manifest_csv
-    if args.save_image_for is not None:
-        cfg.save_images = True
-        cfg.save_images_only_datetimes = [s.strip() for s in args.save_image_for.split(',')]
-    if args.save_motion_diagnostics:
-        cfg.save_motion_diagnostics = True
-    if args.save_overlay_diagnostics:
-        cfg.save_overlay_diagnostics = True
-    if args.quick_test is not None:
-        cfg.out_dir = args.quick_test_outdir if args.quick_test_outdir else cfg.out_dir + '_quicktest'
-        cfg.detailed_metrics_csv = os.path.join(cfg.out_dir, 'lk_extrapolation_radar_multimodal_metrics.csv')
-        cfg.mean_metrics_csv = os.path.join(cfg.out_dir, 'lk_extrapolation_radar_multimodal_mean_metrics.csv')
-        if os.path.exists(cfg.detailed_metrics_csv):
-            os.remove(cfg.detailed_metrics_csv)
+        cfg.num_samples = args.num_samples
+    if args.horizons is not None:
+        cfg.horizons = args.horizons
+    if args.metadata_csv is not None:
+        cfg.metadata_csv = args.metadata_csv
     if args.out_dir is not None:
         cfg.out_dir = args.out_dir
-        cfg.detailed_metrics_csv = os.path.join(cfg.out_dir, 'lk_extrapolation_radar_multimodal_metrics.csv')
-        cfg.mean_metrics_csv = os.path.join(cfg.out_dir, 'lk_extrapolation_radar_multimodal_mean_metrics.csv')
-        if os.path.exists(cfg.detailed_metrics_csv):
-            os.remove(cfg.detailed_metrics_csv)
-    os.makedirs(cfg.out_dir, exist_ok=True)
-    print()
-    print('=' * 80)
-    print('pySTEPS RADAR + MULTIMODAL LK EXTRAPOLATION COMPARISON')
-    print('=' * 80)
-    print(f'Radar     : {cfg.radar_base}')
-    print(f'Satellite : {cfg.sat_base}')
-    print(f'Channels  : {cfg.channels}')
-    print(f'Horizons  : {cfg.horizons}')
-    print(f'Forecast   : {cfg.motion_method} motion + {cfg.nowcast_method} nowcast')
-    print(f'History frames: {cfg.lk_num_frames} (spanning {(cfg.lk_num_frames - 1) * cfg.stride_minutes} min back)')
-    print(f'extrap interp_order: {cfg.extrap_interp_order}  |  persistence_blend: {cfg.use_persistence_blend} (<= {cfg.persistence_blend_max_horizon} min)')
-    if args.quick_test is not None:
-        print(f'QUICK TEST MODE: first {args.quick_test} samples only -> {cfg.out_dir}')
-    print('=' * 80)
-    channel_stats = load_channel_stats(cfg)
-    if not os.path.exists(cfg.metadata_csv):
-        raise FileNotFoundError(f'Metadata not found:\n{cfg.metadata_csv}')
-    df = pd.read_csv(cfg.metadata_csv)
-    if args.single_datetime is not None:
-        selected = df[df['datetime'] == args.single_datetime].reset_index(drop=True)
-        if selected.empty:
-            raise ValueError(f"--single_datetime '{args.single_datetime}' not found in {cfg.metadata_csv}. Must match an existing 'datetime' value exactly (format: 'YYYY-MM-DD HH:MM:SS').")
-        cfg.save_images = True
-        print(f'\n[single_datetime mode] Evaluating exactly one sample: {args.single_datetime}')
-        print(f'[single_datetime mode] Figure will be saved to: {cfg.out_dir}\n')
-    elif cfg.use_active_rain_subset:
-        if 'p99(x_seq)' not in df.columns:
-            raise ValueError("use_active_rain_subset=True but the metadata CSV has no 'p99(x_seq)' column to filter dry frames by. Set Config.use_active_rain_subset = False to fall back to the legacy selection, or point active_rain_threshold_mmh at whatever rain-activity column your CSV actually has.")
-        active_df = df[df['p99(x_seq)'] >= cfg.active_rain_threshold_mmh].reset_index(drop=True)
-        print(f'\nActive-rain filter (p99(x_seq) >= {cfg.active_rain_threshold_mmh:.2f} mm/h): {len(active_df)} / {len(df)} candidates ({len(df) - len(active_df)} dry/near-dry sequences excluded)')
-        if len(active_df) == 0:
-            raise ValueError(f'No sequences in {cfg.metadata_csv} have p99(x_seq) >= {cfg.active_rain_threshold_mmh}. Lower Config.active_rain_threshold_mmh.')
-        manifest_path = cfg.subset_manifest_csv
-        manifest_exists = os.path.exists(manifest_path)
-        if cfg.use_existing_subset_manifest and manifest_exists:
-            manifest_df = pd.read_csv(manifest_path)
-            selected = active_df[active_df['datetime'].isin(manifest_df['datetime'])].reset_index(drop=True)
-            print(f'Loaded existing subset manifest: {manifest_path}\n  ({len(selected)} / {len(manifest_df)} manifest entries still present in the active-rain pool)')
-        else:
-            n = min(cfg.subset_size, len(active_df))
-            if n < cfg.subset_size:
-                print(f'  [WARN] Requested subset_size={cfg.subset_size} but only {n} active-rain sequences are available -- using all of them.')
-            selected = active_df.sample(n=n, random_state=cfg.subset_seed).reset_index(drop=True)
-            os.makedirs(os.path.dirname(manifest_path) or '.', exist_ok=True)
-            selected[['datetime']].to_csv(manifest_path, index=False)
-            print(f"Sampled a fresh subset ({len(selected)} sequences, seed={cfg.subset_seed}) and wrote manifest to:\n  {manifest_path}\n  Point every other evaluation script's subset_manifest_csv at this same file to guarantee they all score the identical sequences.")
-        if cfg.select_on_the_hour:
-            parsed_minute = pd.to_datetime(selected['datetime'], format='%Y-%m-%d %H:%M:%S').dt.minute
-            before = len(selected)
-            selected = selected[parsed_minute == 45].reset_index(drop=True)
-            print(f'  [WARN] select_on_the_hour=True further narrowed the active-rain subset from {before} to {len(selected)} sequences (only :45-past-the-hour events kept). This is a figure-timestamp cosmetic constraint -- consider turning it off for bulk metric runs.')
-    else:
-        if cfg.select_on_the_hour:
-            parsed_minute = pd.to_datetime(df['datetime'], format='%Y-%m-%d %H:%M:%S').dt.minute
-            df = df[parsed_minute == 45].reset_index(drop=True)
-            if len(df) == 0:
-                raise ValueError(f'select_on_the_hour=True but no rows in {cfg.metadata_csv} have a datetime with minute == 45. Set Config.select_on_the_hour = False to use all candidate times instead.')
-            print(f'\nRestricted to events at :45 past the hour: {len(df)} candidates')
-        if cfg.select_top_p99 and 'p99(x_seq)' in df.columns:
-            if cfg.num_samples is None:
-                selected = df.sort_values('p99(x_seq)', ascending=False).reset_index(drop=True)
-            else:
-                selected = df.nlargest(cfg.num_samples, 'p99(x_seq)').reset_index(drop=True)
-        elif cfg.num_samples is None:
-            selected = df.reset_index(drop=True)
-        else:
-            selected = df.head(cfg.num_samples).reset_index(drop=True)
-        if cfg.select_top_p99:
-            print("  (top-P99 selection -- biased toward fast/compact convective cells; see inference_pysteps_baseline.py's sample_selection='random' option if you want a representative sample instead)")
-    if args.quick_test is not None:
-        selected = selected.head(args.quick_test).reset_index(drop=True)
-    print(f'\nSamples selected: {len(selected)}')
-    if cfg.save_images and cfg.save_images_only_datetimes is not None:
-        print(f'  Figures will be saved for {len(cfg.save_images_only_datetimes)} specific sample(s) only: {cfg.save_images_only_datetimes}')
-    elif cfg.save_images and len(selected) > 50:
-        print(f'  [WARN] save_images=True with {len(selected)} samples will generate that many PNGs and add real runtime -- consider Config.save_images = False for bulk metric runs, or use --save_image_for to limit to specific samples.')
-    already_done = set()
-    if args.quick_test is None and args.single_datetime is None and os.path.exists(cfg.detailed_metrics_csv):
-        prior_df = pd.read_csv(cfg.detailed_metrics_csv)
-        already_done = set(prior_df['datetime'].unique())
-        print(f'\nResume: found {len(already_done)} already-completed sample datetimes in {cfg.detailed_metrics_csv}')
-    remaining = selected[~selected['datetime'].isin(already_done)].reset_index(drop=True)
-    print(f'Remaining to process: {len(remaining)} / {len(selected)}')
-    worker_args = [(sample_idx, row, cfg, channel_stats) for sample_idx, row in remaining.iterrows()]
-    csv_header_written = os.path.exists(cfg.detailed_metrics_csv)
+    if args.patch_size is not None:
+        cfg.patch_size = args.patch_size
+    if args.patch_overlap is not None:
+        cfg.patch_overlap = args.patch_overlap
+    if args.device is not None:
+        cfg.device = args.device
+    if args.show_storm_metrics:
+        cfg.show_storm_metrics = True
+    if args.rain_threshold is not None:
+        cfg.rain_threshold = args.rain_threshold
+    if args.csi_threshold_mmh is not None:
+        cfg.csi_threshold_mmh = args.csi_threshold_mmh
 
-    def _append_results(rows):
-        nonlocal csv_header_written
-        if not rows:
-            return
-        chunk_df = pd.DataFrame(rows)
-        chunk_df.to_csv(cfg.detailed_metrics_csv, mode='a', index=False, header=not csv_header_written)
-        csv_header_written = True
-    num_processes = 1 if args.quick_test is not None or args.single_datetime is not None else cfg.num_processes
-    if worker_args:
-        if num_processes > 1 and len(worker_args) > 1:
-            print(f'\nRunning {len(worker_args)} samples across {num_processes} worker processes (each sample uses deterministic LK extrapolation)...\n')
-            with mp.Pool(processes=num_processes) as pool:
-                for result in pool.imap_unordered(process_one_sample, worker_args):
-                    _append_results(result)
-        else:
-            print(f'\nRunning {len(worker_args)} samples sequentially...\n')
-            for a in worker_args:
-                _append_results(process_one_sample(a))
-    else:
-        print('\nAll selected samples already completed -- nothing to run, computing mean from existing results.')
-    if not os.path.exists(cfg.detailed_metrics_csv):
-        print('\nNo results generated.')
-        return
-    metrics_df = pd.read_csv(cfg.detailed_metrics_csv)
-    mean_df = compute_pooled_mean(metrics_df, cfg)
-    mean_df.to_csv(cfg.mean_metrics_csv, index=False)
-    print()
-    print('=' * 80)
-    print('FINAL POOLED MEAN RESULTS  (CSI/ETS pooled from summed counts, not averaged per-sample)')
-    print('=' * 80)
-    print(mean_df.to_string(index=False, float_format=lambda x: f'{x:.4f}'))
-    print()
-    print('-' * 80)
-    print('QUICK LOOK: Radar-only vs Multimodal at t+15 / t+30 (the horizons you care about)')
-    print('-' * 80)
-    focus = mean_df[mean_df['horizon_min'].isin(cfg.metric_horizons)].sort_values(['horizon_min', 'model'])
-    if not focus.empty:
-        threshold_cols = []
-        for threshold in cfg.categorical_thresholds:
-            suffix = str(int(threshold)) if float(threshold).is_integer() else str(threshold)
-            threshold_cols.append(f'CSI@{suffix}')
-        for threshold in cfg.categorical_thresholds:
-            suffix = str(int(threshold)) if float(threshold).is_integer() else str(threshold)
-            threshold_cols.append(f'ETS@{suffix}')
-        display_cols = ['model', 'horizon_min', 'n_samples'] + threshold_cols + ['CSI_mean', 'ETS_mean', 'FSS9', 'MAE']
-        print(focus[display_cols].to_string(index=False, float_format=lambda x: f'{x:.4f}'))
-    print()
-    print(f'Detailed CSV:\n{cfg.detailed_metrics_csv}')
-    print(f'\nMean CSV (pooled):\n{cfg.mean_metrics_csv}')
-    print('\nDone.')
-if __name__ == '__main__':
+    cfg.detailed_metrics_csv = os.path.join(cfg.out_dir, "dl_fullimage_metrics.csv")
+    cfg.mean_metrics_csv = os.path.join(cfg.out_dir, "dl_fullimage_mean_metrics.csv")
+
+    os.makedirs(cfg.out_dir, exist_ok=True)
+
+    df     = pd.read_csv(cfg.metadata_csv)
+    df_top = df.nlargest(cfg.num_samples, 'p99(x_seq)').reset_index(drop=True)
+
+    metrics_flag = getattr(cfg, 'show_storm_metrics', False)
+
+    models = load_all_models(cfg)
+    n_hor  = len(cfg.horizons)
+
+    all_metrics = []
+
+    for idx, row in df_top.iterrows():
+
+        input_tensor, targets_np, masks_np, dt = load_full_sample(row, cfg)
+
+        gt_mm = {}
+        masks = {}
+        for h_idx, h in enumerate(cfg.horizons):
+            gt_mm[h] = inverse_transform_np(targets_np[h_idx])
+            masks[h] = masks_np[h_idx]
+
+        preds = {}
+        for minfo in MODELS:
+            mkey = minfo['key']
+            if mkey == 'ensemble':
+                continue
+
+            mlabel = minfo['label']
+            pred_cpu = run_model(models[mkey], input_tensor, n_hor, cfg)
+            pred_np  = pred_cpu.squeeze(0).numpy()
+            preds[mkey] = {h: inverse_transform_np(pred_np[h_idx])
+                           for h_idx, h in enumerate(cfg.horizons)}
+
+            maes = [
+                f"t+{h}="
+                f"{np.abs(preds[mkey][h][masks[h]>0.5] - gt_mm[h][masks[h]>0.5]).mean():.2f}"
+                for h in cfg.horizons
+                if masks[h].sum() > 0
+            ]
+
+        preds['ensemble'] = compute_ensemble(preds, cfg.horizons, cfg.ensemble_weights)
+        ens_maes = [
+            f"t+{h}="
+            f"{np.abs(preds['ensemble'][h][masks[h]>0.5] - gt_mm[h][masks[h]>0.5]).mean():.2f}"
+            for h in cfg.horizons
+            if masks[h].sum() > 0
+        ]
+
+        for minfo in MODELS:
+            mkey   = minfo['key']
+            mlabel = minfo['label']
+            for h in cfg.horizons:
+                metrics = compute_metrics(preds[mkey][h], gt_mm[h], masks[h] > 0.5, cfg)
+                if metrics is None:
+                    continue
+                row_result = {"model": mlabel, "datetime": dt.strftime("%Y-%m-%d %H:%M:%S"), "horizon_min": h}
+                row_result.update(metrics)
+                all_metrics.append(row_result)
+
+        #sd = {
+        #    'dt':    dt,
+        #    'gt_mm': gt_mm,
+        #    'masks': masks,
+        #    'preds': preds,
+        #    'p99':   float(row['p99(x_seq)']),
+        #}
+
+        #out_fname = f"sample_{idx+1:02d}_{str(dt)[:10]}_{str(dt)[11:16].replace(':','')}.png"
+        #out_path  = os.path.join(cfg.out_dir, out_fname)
+        #save_single_sample(sd, cfg, out_path, idx)
+
+    if all_metrics:
+        metrics_df = pd.DataFrame(all_metrics)
+        metrics_df.to_csv(cfg.detailed_metrics_csv, index=False)
+
+        mean_df = compute_pooled_mean(metrics_df, cfg)
+        mean_df.to_csv(cfg.mean_metrics_csv, index=False)
+
+
+if __name__ == "__main__":
     main()
