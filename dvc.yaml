@@ -1,0 +1,118 @@
+schema: '2.0'
+
+stages:
+  preprocess_stats:
+    cmd: python src/preprocess/compute_mean_std_satellite.py
+    deps:
+      - src/preprocess/compute_mean_std_satellite.py
+      - config/config.yml
+    outs:
+      - metadata/channel_stats.json
+
+  generate_metadata:
+    cmd: python src/preprocess/generate_metadata_multihorizon.py
+    deps:
+      - src/preprocess/generate_metadata_multihorizon.py
+      - config/config.yml
+    outs:
+      - metadata/all_samples.csv
+
+  compute_thresholds:
+    cmd: python src/preprocess/global_quantile_threshold_multihorizon.py
+    deps:
+      - src/preprocess/global_quantile_threshold_multihorizon.py
+      - metadata/all_samples.csv
+    outs:
+      - metadata/storm_threshold.json
+      - metadata/storm_threshold.npy
+
+  eval_pysteps_baseline:
+    cmd: python train/pySTEPS/train_baseline.py
+    deps:
+      - train/pySTEPS/train_baseline.py
+      - metadata/all_samples.csv
+      - config/config.yml
+    outs:
+      - artifacts/outputs/non-DL/lk_extrapolation_radar_multimodal_mean_metrics.csv
+      - artifacts/outputs/non-DL/pysteps_bar_ets_csi.png
+      - artifacts/outputs/non-DL/pysteps_bar_mae_mse_psnr_ssim.png
+
+  train_radar_earthformer:
+    cmd: python train/radar/train_earthformer.py
+    deps:
+      - train/radar/train_earthformer.py
+      - src/models/earthformer/
+      - config/earthformer_nowcast.yaml
+      - metadata/all_samples.csv
+    outs:
+      - artifacts/outputs/radar/dl_fullimage_mean_metrics.csv:
+          cache: false
+
+  train_radar_convlstm:
+    cmd: python train/radar/train_ConvLSTM.py
+    deps:
+      - train/radar/train_ConvLSTM.py
+      - src/models/convlstm/
+      - config/config.yml
+      - metadata/all_samples.csv
+
+  train_radar_smaat_unet:
+    cmd: python train/radar/train_smaAt_UNet.py
+    deps:
+      - train/radar/train_smaAt_UNet.py
+      - src/models/smaat_unet/
+      - metadata/all_samples.csv
+
+  infer_radar:
+    cmd: python train/radar/inference.py
+    deps:
+      - train/radar/inference.py
+      - metadata/all_samples.csv
+    outs:
+      - artifacts/outputs/radar/table52_bar_ets_csi_v2.png
+      - artifacts/outputs/radar/table52_bar_mae_mse_psnr_ssim_v3.png
+
+  train_multimodal_earthformer:
+    cmd: python train/multimodal/train_earthformer.py
+    deps:
+      - train/multimodal/train_earthformer.py
+      - src/models/earthformer/
+      - config/earthformer_nowcast.yaml
+      - metadata/all_samples.csv
+    outs:
+      - artifacts/outputs/multimodal/dl_fullimage_mean_metrics.csv:
+          cache: false
+
+  train_multimodal_convlstm:
+    cmd: python train/multimodal/train_ConvLSTM.py
+    deps:
+      - train/multimodal/train_ConvLSTM.py
+      - src/models/convlstm/
+      - metadata/all_samples.csv
+
+  train_multimodal_smaat_unet:
+    cmd: python train/multimodal/train_smaAt_UNet.py
+    deps:
+      - train/multimodal/train_smaAt_UNet.py
+      - src/models/smaat_unet/
+      - metadata/all_samples.csv
+
+  infer_multimodal:
+    cmd: python train/multimodal/inference.py
+    deps:
+      - train/multimodal/inference.py
+      - metadata/all_samples.csv
+    outs:
+      - artifacts/outputs/multimodal/table51_bar_ets_csi_v2.png
+      - artifacts/outputs/multimodal/table51_bar_mae_mse_psnr_ssim_v3.png
+
+  generate_visualizations:
+    cmd: python visualization/radar_visualization.py && python visualization/satellite_visualizatiion.py
+    deps:
+      - visualization/radar_visualization.py
+      - visualization/satellite_visualizatiion.py
+      - artifacts/outputs/multimodal/dl_fullimage_mean_metrics.csv
+      - artifacts/outputs/radar/dl_fullimage_mean_metrics.csv
+    outs:
+      - artifacts/outputs/multimodal/sample_04_2024-06-30_0045.png
+      - artifacts/outputs/radar/sample_04_2024-06-30_0130.png
