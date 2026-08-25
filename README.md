@@ -179,19 +179,15 @@ python unittest/sanity_check_dataloader_pipeline.py
 
 ## Configuration
 
-- **`config/config.yml`** — shared settings: data paths, satellite
-  channels, temporal history/cadence, forecast horizons, spatial
-  transform, NaN-handling policy.
-- **`config/earthformer_nowcast.yaml`** — EarthFormer/CuboidTransformer
-  architecture hyperparameters. Its `input_shape` must match
-  `[n_timesteps, 256, 256, n_channels_per_step]` — `n_channels_per_step`
-  is `3` for multimodal (2 satellite channels + radar) and `1` for
-  radar-only. Each EarthFormer training script asserts this at startup.
+| File | Contents |
+|------|----------|
+| `config/config.yml` | Shared settings: data paths, satellite channels, temporal history/cadence, forecast horizons, spatial transform, NaN-handling policy |
+| `config/earthformer_nowcast.yaml` | EarthFormer/CuboidTransformer architecture hyperparameters. Its `input_shape` must match `[n_timesteps, 256, 256, n_channels_per_step]` — `n_channels_per_step` is `3` for multimodal (2 satellite channels + radar) and `1` for radar-only. Each EarthFormer training script asserts this at startup |
 
-Per-model training hyperparameters (learning rate, gradient clipping,
-mixed precision, loss weights, checkpoint/MLflow names) live at the top of
-each `train_*.py` script as a `MultiHorizonTrainingConfig` class — edit
-there rather than in `config.yml`.
+Per-model training hyperparameters (learning rate, gradient clipping, mixed
+precision, loss weights, checkpoint/MLflow names) live at the top of each
+`train_*.py` script as a `MultiHorizonTrainingConfig` class — edit there
+rather than in `config.yml`.
 
 ## Training
 
