@@ -41,6 +41,7 @@ precipitation nowcasting.
 - [Models](#models)
 - [Outputs](#outputs)
   - [Example outputs](#example-outputs)
+- [Author](#author)
 - [License](#license)
 
 ## Overview
@@ -323,6 +324,12 @@ to its figures — the numeric summary behind the charts above. All three
 directories fill up automatically as you run inference/baseline
 scripts; the filenames shown here are simply the examples currently
 checked in.
+
+## Author
+
+**Atikul Islam Sajib**
+
+Supervisors: Dr. Stefan Edlich, Dr. Noelia Otero Felipe
 
 ## License
 
