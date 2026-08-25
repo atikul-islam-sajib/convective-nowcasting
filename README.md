@@ -1,25 +1,26 @@
-# Convective Precipiation Nowcasting
+# Convective Precipitation Nowcasting
 
-Convective precipitation is highly localized and evolves continuously over short timescales, making short-term precipitation forecasting particularly challenging despite its importance for early warning and weather-sensitive operations. This thesis evaluates five deep learning architectures for convective precipitation nowcasting over Germany and investigates whether combining radar and satellite observations improves forecasting performance compared with a radar-only configuration. The models were trained using paired RADOLAN radar and SEVIRI satellite observations collected between 2015 and 2024. In addition to the five individual architectures, an ensemble combining their predictions was also evaluated. Forecast performance was assessed at lead times of 15, 30, 45, and 60 minutes using both continuous and categorical evaluation metrics. No single architecture performed best across all metrics. The ensemble achieved the strongest overall performance, whereas VPTR showed the highest categorical skill, particularly at longer lead times. Integrating satellite observations consistently improved forecast quality, with the largest gains observed at longer prediction horizons. Severe convective precipitation remained the most difficult to predict because such events were underrepresented in the training data. These findings demonstrate the importance of both model architecture and multimodal observations for improving convective precipitation nowcasting.
-
-
-
-### Example outputs
-
-Storm-sample comparison figures and summary charts saved by inference.py, side by side for each input mode:
-
-#### Multimodal
-
-<table> <tr><td colspan="2"><img src="artifacts/outputs/multimodal/sample_04_2024-06-30_0045.png" width="100%" alt="Multimodal storm sample comparison"></td></tr> <tr> <td width="50%"><img src="artifacts/outputs/multimodal/table51_bar_ets_csi_v2.png" width="100%" alt="Multimodal ETS/CSI bar chart"></td> <td width="50%"><img src="artifacts/outputs/multimodal/table51_bar_mae_mse_psnr_ssim_v3.png" width="100%" alt="Multimodal MAE/MSE/PSNR/SSIM bar chart"></td> </tr> </table>
-
-#### Radar-only
-
-<table> <tr><td colspan="2"><img src="artifacts/outputs/radar/sample_04_2024-06-30_0130.png" width="100%" alt="Radar-only storm sample comparison"></td></tr> <tr> <td width="50%"><img src="artifacts/outputs/radar/table52_bar_ets_csi_v2.png" width="100%" alt="Radar-only ETS/CSI bar chart"></td> <td width="50%"><img src="artifacts/outputs/radar/table52_bar_mae_mse_psnr_ssim_v3.png" width="100%" alt="Radar-only MAE/MSE/PSNR/SSIM bar chart"></td> </tr> </table>
-
-#### pySTEPS (non-DL: LK)
-
-<table> <tr><td colspan="2"><img src="artifacts/outputs/non-DL/pysteps_comparison_top_p99_sample04_2024-06-30.png" width="100%" alt="pySTEPS storm sample comparison"></td></tr> <tr> <td width="50%"><img src="artifacts/outputs/non-DL/pysteps_bar_ets_csi.png" width="100%" alt="pySTEPS ETS/CSI bar chart"></td> <td width="50%"><img src="artifacts/outputs/non-DL/pysteps_bar_mae_mse_psnr_ssim.png" width="100%" alt="pySTEPS MAE/MSE/PSNR/SSIM bar chart"></td> </tr> </table>
-
+Convective precipitation is highly localized and evolves continuously over
+short timescales, making short-term precipitation forecasting particularly
+challenging despite its importance for early warning and weather-sensitive
+operations. This thesis evaluates five deep learning architectures for
+convective precipitation nowcasting over Germany and investigates whether
+combining radar and satellite observations improves forecasting performance
+compared with a radar-only configuration. The models were trained using
+paired RADOLAN radar and SEVIRI satellite observations collected between
+2015 and 2024. In addition to the five individual architectures, an
+ensemble combining their predictions was also evaluated. Forecast
+performance was assessed at lead times of 15, 30, 45, and 60 minutes using
+both continuous and categorical evaluation metrics. No single architecture
+performed best across all metrics. The ensemble achieved the strongest
+overall performance, whereas VPTR showed the highest categorical skill,
+particularly at longer lead times. Integrating satellite observations
+consistently improved forecast quality, with the largest gains observed at
+longer prediction horizons. Severe convective precipitation remained the
+most difficult to predict because such events were underrepresented in the
+training data. These findings demonstrate the importance of both model
+architecture and multimodal observations for improving convective
+precipitation nowcasting.
 
 ## Contents
 
@@ -168,7 +169,6 @@ run the preprocessing scripts in `src/preprocess/` in order:
 | 5 | `global_quantile_threshold_multihorizon.py` / `compute_presample_thresholds.py` | Computes rain-rate percentile thresholds → `metadata/storm_threshold.json` |
 | 6 | `generate_test_data_full_image.py` | Builds the held-out full-image (unpatched) evaluation set used by `inference.py` |
 
-
 Equivalent SLURM wrappers for a subset of these steps are in `slurms/`.
 
 Before a real training run, verify the pipeline end-to-end with:
@@ -278,6 +278,51 @@ usage.
 - `logs/` — free-form run logs
 - Checkpoints, viz PNGs, and `mlruns/` are created at the repo root by
   each training script (not tracked in version control by default)
+
+### Example outputs
+
+Storm-sample comparison figures and summary charts saved by
+`inference.py` (DL models) and `train/pySTEPS/train_baseline.py`
+(classical baseline). Each pipeline follows the same layout: a
+full-width storm-sample comparison on top, and its ETS/CSI and
+MAE/MSE/PSNR/SSIM bar charts side by side below.
+
+**Multimodal** — `artifacts/outputs/multimodal/`
+
+<table>
+<tr><td colspan="2"><img src="artifacts/outputs/multimodal/sample_04_2024-06-30_0045.png" width="100%" alt="Multimodal storm sample comparison"></td></tr>
+<tr>
+<td width="50%"><img src="artifacts/outputs/multimodal/table51_bar_ets_csi_v2.png" width="100%" alt="Multimodal ETS/CSI bar chart"></td>
+<td width="50%"><img src="artifacts/outputs/multimodal/table51_bar_mae_mse_psnr_ssim_v3.png" width="100%" alt="Multimodal MAE/MSE/PSNR/SSIM bar chart"></td>
+</tr>
+</table>
+
+**Radar-only** — `artifacts/outputs/radar/`
+
+<table>
+<tr><td colspan="2"><img src="artifacts/outputs/radar/sample_04_2024-06-30_0130.png" width="100%" alt="Radar-only storm sample comparison"></td></tr>
+<tr>
+<td width="50%"><img src="artifacts/outputs/radar/table52_bar_ets_csi_v2.png" width="100%" alt="Radar-only ETS/CSI bar chart"></td>
+<td width="50%"><img src="artifacts/outputs/radar/table52_bar_mae_mse_psnr_ssim_v3.png" width="100%" alt="Radar-only MAE/MSE/PSNR/SSIM bar chart"></td>
+</tr>
+</table>
+
+**pySTEPS (non-DL: Lucas–Kanade)** — `artifacts/outputs/non-DL/`
+
+<table>
+<tr><td colspan="2"><img src="artifacts/outputs/non-DL/pysteps_comparison_top_p99_sample04_2024-06-30.png" width="100%" alt="pySTEPS storm sample comparison"></td></tr>
+<tr>
+<td width="50%"><img src="artifacts/outputs/non-DL/pysteps_bar_ets_csi.png" width="100%" alt="pySTEPS ETS/CSI bar chart"></td>
+<td width="50%"><img src="artifacts/outputs/non-DL/pysteps_bar_mae_mse_psnr_ssim.png" width="100%" alt="pySTEPS MAE/MSE/PSNR/SSIM bar chart"></td>
+</tr>
+</table>
+
+Each pipeline also writes a `dl_fullimage_mean_metrics.csv` (DL models)
+or `lk_extrapolation_radar_multimodal_mean_metrics.csv` (pySTEPS) next
+to its figures — the numeric summary behind the charts above. All three
+directories fill up automatically as you run inference/baseline
+scripts; the filenames shown here are simply the examples currently
+checked in.
 
 ## License
 
