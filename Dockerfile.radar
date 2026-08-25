@@ -1,15 +1,3 @@
-# ============================================================
-# Radar-only nowcasting image
-# ============================================================
-# Build from the repo root (the directory containing train/, src/,
-# datasets/, utils/, config/, metadata/, metadata_patch/).
-#
-#   docker build -t nowcast-radar -f Dockerfile.radar .
-#
-# Same runtime dependencies as the multimodal image — the radar-only
-# scripts don't need any extra libraries, they just skip the
-# satellite-loading code path. Kept as a separate image so the two
-# pipelines can be built, tagged, and deployed independently.
 FROM pytorch/pytorch:2.4.1-cuda12.1-cudnn9-runtime
 
 ENV PYTHONUNBUFFERED=1 \
