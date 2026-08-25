@@ -982,7 +982,7 @@ def main():
                 row_result = {"model": mlabel, "datetime": dt.strftime("%Y-%m-%d %H:%M:%S"), "horizon_min": h}
                 row_result.update(metrics)
                 all_metrics.append(row_result)
-        """"
+        """
         #If we wart to save the results to a file
             dt = {
                 'dt':    dt,

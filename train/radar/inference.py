@@ -66,8 +66,10 @@ class InferenceConfig:
     out_dir      = 'INFERENCE_FULLIMAGE_COMPARISON_RADAR'
     metadata_csv = 'metadata_patch/test_fullimage_summer.csv'
 
-    detailed_metrics_csv = os.path.join(out_dir, 'dl_fullimage_metrics.csv')
-    mean_metrics_csv      = os.path.join(out_dir, 'dl_fullimage_mean_metrics.csv')
+    detailed_metrics_csv    = os.path.join(out_dir, 'dl_fullimage_metrics.csv')
+    mean_metrics_csv        = os.path.join(out_dir, 'dl_fullimage_mean_metrics.csv')
+    pooled_mean_metrics_csv = os.path.join(out_dir, 'dl_fullimage_pooled_mean_metrics.csv')
+    simple_mean_metrics_csv = os.path.join(out_dir, 'dl_fullimage_simple_mean_metrics.csv')
 
     radar_base = '/home/fe/sajib/scratch/weather-data/radar_de'
 
@@ -284,6 +286,36 @@ def compute_pooled_mean(metrics_df, cfg):
 
         row['CSI-M'] = float(np.nanmean(csi_vals)) if csi_vals else float('nan')
         row['ETS-M'] = float(np.nanmean(ets_vals)) if ets_vals else float('nan')
+        rows.append(row)
+    return pd.DataFrame(rows)
+
+
+def compute_simple_mean(metrics_df, cfg):
+    csi_thresholds = cfg.csi_threshold_mmh
+    if np.isscalar(csi_thresholds):
+        csi_thresholds = [csi_thresholds]
+
+    value_cols = ['MAE', 'MSE', 'RMSE', 'PSNR', 'SSIM']
+    value_cols += [
+        f'CSI@{str(int(t)) if float(t).is_integer() else str(t)}'
+        for t in csi_thresholds
+    ]
+    value_cols += [
+        f'ETS@{str(int(t)) if float(t).is_integer() else str(t)}'
+        for t in cfg.categorical_thresholds
+    ]
+    value_cols = [c for c in value_cols if c in metrics_df.columns]
+
+    rows = []
+    for (model, horizon), g in metrics_df.groupby(['model', 'horizon_min']):
+        row = {'model': model, 'horizon_min': horizon, 'n_samples': len(g)}
+        for col in value_cols:
+            row[col] = float(np.nanmean(g[col]))
+
+        csi_cols = [c for c in value_cols if c.startswith('CSI@')]
+        ets_cols = [c for c in value_cols if c.startswith('ETS@')]
+        row['CSI-M'] = float(np.nanmean(g[csi_cols].values)) if csi_cols else float('nan')
+        row['ETS-M'] = float(np.nanmean(g[ets_cols].values)) if ets_cols else float('nan')
         rows.append(row)
     return pd.DataFrame(rows)
 
@@ -836,6 +868,7 @@ def main():
     parser.add_argument("--show_storm_metrics", action="store_true")
     parser.add_argument("--rain_threshold", type=float, default=None)
     parser.add_argument("--csi_threshold_mmh", type=float, nargs="+", default=None)
+    parser.add_argument("--mean_type", type=str, default="pooled", choices=["pooled", "simple"])
     args = parser.parse_args()
 
     cfg = InferenceConfig()
@@ -863,6 +896,8 @@ def main():
 
     cfg.detailed_metrics_csv = os.path.join(cfg.out_dir, "dl_fullimage_metrics.csv")
     cfg.mean_metrics_csv = os.path.join(cfg.out_dir, "dl_fullimage_mean_metrics.csv")
+    cfg.pooled_mean_metrics_csv = os.path.join(cfg.out_dir, "dl_fullimage_pooled_mean_metrics.csv")
+    cfg.simple_mean_metrics_csv = os.path.join(cfg.out_dir, "dl_fullimage_simple_mean_metrics.csv")
 
     os.makedirs(cfg.out_dir, exist_ok=True)
 
@@ -923,25 +958,32 @@ def main():
                 row_result = {"model": mlabel, "datetime": dt.strftime("%Y-%m-%d %H:%M:%S"), "horizon_min": h}
                 row_result.update(metrics)
                 all_metrics.append(row_result)
+        """
+        #If we wart to save the results to a file
+            dt = {
+                'dt':    dt,
+                'gt_mm': gt_mm,
+                'masks': masks,
+                'preds': preds,
+                'p99':   float(row['p99(x_seq)']),
+            }
 
-        #sd = {
-        #    'dt':    dt,
-        #    'gt_mm': gt_mm,
-        #    'masks': masks,
-        #    'preds': preds,
-        #    'p99':   float(row['p99(x_seq)']),
-        #}
-
-        #out_fname = f"sample_{idx+1:02d}_{str(dt)[:10]}_{str(dt)[11:16].replace(':','')}.png"
-        #out_path  = os.path.join(cfg.out_dir, out_fname)
-        #save_single_sample(sd, cfg, out_path, idx)
-
+            out_fname = f"sample_{idx+1:02d}_{str(dt)[:10]}_{str(dt)[11:16].replace(':','')}.png"
+            out_path  = os.path.join(cfg.out_dir, out_fname)
+            save_single_sample(sd, cfg, out_path, idx)
+        """
     if all_metrics:
         metrics_df = pd.DataFrame(all_metrics)
         metrics_df.to_csv(cfg.detailed_metrics_csv, index=False)
 
-        mean_df = compute_pooled_mean(metrics_df, cfg)
-        mean_df.to_csv(cfg.mean_metrics_csv, index=False)
+        pooled_df = compute_pooled_mean(metrics_df, cfg)
+        pooled_df.to_csv(cfg.pooled_mean_metrics_csv, index=False)
+
+        simple_df = compute_simple_mean(metrics_df, cfg)
+        simple_df.to_csv(cfg.simple_mean_metrics_csv, index=False)
+
+        (pooled_df if args.mean_type == "pooled" else simple_df).to_csv(
+            cfg.mean_metrics_csv, index=False)
 
 
 if __name__ == "__main__":
