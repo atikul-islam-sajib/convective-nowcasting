@@ -8,15 +8,15 @@ Convective precipitation is highly localized and evolves continuously over short
 
 Storm-sample comparison figures and summary charts saved by inference.py, side by side for each input mode:
 
-#### Multimodal — artifacts/outputs/multimodal/
+#### Multimodal
 
 <table> <tr><td colspan="2"><img src="artifacts/outputs/multimodal/sample_04_2024-06-30_0045.png" width="100%" alt="Multimodal storm sample comparison"></td></tr> <tr> <td width="50%"><img src="artifacts/outputs/multimodal/table51_bar_ets_csi_v2.png" width="100%" alt="Multimodal ETS/CSI bar chart"></td> <td width="50%"><img src="artifacts/outputs/multimodal/table51_bar_mae_mse_psnr_ssim_v3.png" width="100%" alt="Multimodal MAE/MSE/PSNR/SSIM bar chart"></td> </tr> </table>
 
-#### Radar-only — artifacts/outputs/radar/
+#### Radar-only
 
 <table> <tr><td colspan="2"><img src="artifacts/outputs/radar/sample_04_2024-06-30_0130.png" width="100%" alt="Radar-only storm sample comparison"></td></tr> <tr> <td width="50%"><img src="artifacts/outputs/radar/table52_bar_ets_csi_v2.png" width="100%" alt="Radar-only ETS/CSI bar chart"></td> <td width="50%"><img src="artifacts/outputs/radar/table52_bar_mae_mse_psnr_ssim_v3.png" width="100%" alt="Radar-only MAE/MSE/PSNR/SSIM bar chart"></td> </tr> </table>
 
-#### pySTEPS (non-DL) — artifacts/outputs/non-DL/
+#### pySTEPS (non-DL: LK)
 
 <table> <tr><td colspan="2"><img src="artifacts/outputs/non-DL/pysteps_comparison_top_p99_sample04_2024-06-30.png" width="100%" alt="pySTEPS storm sample comparison"></td></tr> <tr> <td width="50%"><img src="artifacts/outputs/non-DL/pysteps_bar_ets_csi.png" width="100%" alt="pySTEPS ETS/CSI bar chart"></td> <td width="50%"><img src="artifacts/outputs/non-DL/pysteps_bar_mae_mse_psnr_ssim.png" width="100%" alt="pySTEPS MAE/MSE/PSNR/SSIM bar chart"></td> </tr> </table>
 
@@ -159,22 +159,15 @@ Raw inputs are per-timestep `.npy` radar frames (`radar_de/`) and
 per-channel satellite frames (`satellite_de_regridded/`). Before training,
 run the preprocessing scripts in `src/preprocess/` in order:
 
-1. **`compute_mean_std_satellite.py`** — per-channel satellite
-   normalization stats → `metadata/channel_stats.json`
-2. **`generate_metadata_multihorizon.py`** /
-   **`generate_metadata_multihorizon_season.py`** — builds the sample
-   index (valid `reference_time` → history/target timestamp pairs) across
-   all forecast horizons → `metadata/all_samples.csv`
-3. **`generate_metadata_patch.py`** — expands the full-image index into
-   fixed-size training patches with row/col offsets
-4. **`sampling_patch_metadata.py`** — subsamples patches (e.g. to balance
-   rain intensity) into the `train`/`val` CSVs referenced by the training
-   configs
-5. **`global_quantile_threshold_multihorizon.py`** /
-   **`compute_presample_thresholds.py`** — computes rain-rate percentile
-   thresholds → `metadata/storm_threshold.json`
-6. **`generate_test_data_full_image.py`** — builds the held-out
-   full-image (unpatched) evaluation set used by `inference.py`
+| Step | Script | Purpose → Output |
+|------|--------|-------------------|
+| 1 | `compute_mean_std_satellite.py` | Per-channel satellite normalization stats → `metadata/channel_stats.json` |
+| 2 | `generate_metadata_multihorizon.py` / `generate_metadata_multihorizon_season.py` | Builds the sample index (valid `reference_time` → history/target timestamp pairs) across all forecast horizons → `metadata/all_samples.csv` |
+| 3 | `generate_metadata_patch.py` | Expands the full-image index into fixed-size training patches with row/col offsets |
+| 4 | `sampling_patch_metadata.py` | Subsamples patches (e.g. to balance rain intensity) into the `train`/`val` CSVs referenced by the training configs |
+| 5 | `global_quantile_threshold_multihorizon.py` / `compute_presample_thresholds.py` | Computes rain-rate percentile thresholds → `metadata/storm_threshold.json` |
+| 6 | `generate_test_data_full_image.py` | Builds the held-out full-image (unpatched) evaluation set used by `inference.py` |
+
 
 Equivalent SLURM wrappers for a subset of these steps are in `slurms/`.
 
