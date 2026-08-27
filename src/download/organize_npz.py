@@ -14,11 +14,6 @@ logging.basicConfig(
 
 
 def organize_npy_by_date(src_folder, dst_folder):
-    """
-    Same logic as your original function, but moves files into a different folder.
-    No changes to filename parsing or structure.
-    """
-
     os.makedirs(dst_folder, exist_ok=True)
 
     for file in os.listdir(src_folder):

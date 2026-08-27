@@ -7,10 +7,10 @@ def process_file(npz_path, output_root):
     try:
         filename = os.path.basename(npz_path)
         parts = filename.split("_")
-        date_str = parts[2]        # e.g., 20240101
-        time_str = parts[3][:4]    # e.g., 0000
+        date_str = parts[2]       
+        time_str = parts[3][:4]   
         timestamp = datetime.strptime(f"{date_str}_{time_str}", "%Y%m%d_%H%M")
-        full_time_str = timestamp.strftime("%H%M%S")  # e.g., 000000
+        full_time_str = timestamp.strftime("%H%M%S")  
     except Exception as e:
         return f"Skipping {filename} due to parse error: {e}"
 
@@ -57,7 +57,7 @@ def convert_january_month_parallel(january_folder, output_root, max_workers=8):
             if (
                 f.endswith(".npz")
                 and 'CH7_CH9' in f
-                and not f.startswith("._")  # Skip macOS metadata files
+                and not f.startswith("._")  
             ):
                 all_npz_files.append(os.path.join(root, f))
 
@@ -68,7 +68,6 @@ def convert_january_month_parallel(january_folder, output_root, max_workers=8):
         for future in as_completed(futures):
             print(future.result())
 
-# === Example usage ===
 convert_january_month_parallel(
     january_folder="/home/sajib/Desktop/npz-again",
     output_root="/home/sajib/Desktop/npz-to-npy",
