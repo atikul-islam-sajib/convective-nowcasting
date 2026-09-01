@@ -193,7 +193,7 @@ def get_parser():
     parser.add_argument(
         '--splits',
         nargs='+',
-        default=['train', 'val', 'test'],
+        default=['train', 'val'],
         help="Splits to process (default: train val test)",
     )
     parser.add_argument(

@@ -279,52 +279,7 @@ usage.
 - `logs/` — free-form run logs
 - Checkpoints, viz PNGs, and `mlruns/` are created at the repo root by
   each training script (not tracked in version control by default)
-
-### Example outputs
-
-Storm-sample comparison figures and summary charts saved by
-`inference.py` (DL models) and `train/pySTEPS/train_baseline.py`
-(classical baseline). Each pipeline follows the same layout: a
-full-width storm-sample comparison on top, and its ETS/CSI and
-MAE/MSE/PSNR/SSIM bar charts side by side below.
-
-**Multimodal** — `artifacts/outputs/multimodal/`
-
-<table>
-<tr><td colspan="2"><img src="artifacts/outputs/multimodal/sample_04_2024-06-30_0045.png" width="100%" alt="Multimodal storm sample comparison"></td></tr>
-<tr>
-<td width="50%"><img src="artifacts/outputs/multimodal/table51_bar_ets_csi_v2.png" width="100%" alt="Multimodal ETS/CSI bar chart"></td>
-<td width="50%"><img src="artifacts/outputs/multimodal/table51_bar_mae_mse_psnr_ssim_v3.png" width="100%" alt="Multimodal MAE/MSE/PSNR/SSIM bar chart"></td>
-</tr>
-</table>
-
-**Radar-only** — `artifacts/outputs/radar/`
-
-<table>
-<tr><td colspan="2"><img src="artifacts/outputs/radar/sample_04_2024-06-30_0130.png" width="100%" alt="Radar-only storm sample comparison"></td></tr>
-<tr>
-<td width="50%"><img src="artifacts/outputs/radar/table52_bar_ets_csi_v2.png" width="100%" alt="Radar-only ETS/CSI bar chart"></td>
-<td width="50%"><img src="artifacts/outputs/radar/table52_bar_mae_mse_psnr_ssim_v3.png" width="100%" alt="Radar-only MAE/MSE/PSNR/SSIM bar chart"></td>
-</tr>
-</table>
-
-**pySTEPS (non-DL: Lucas–Kanade)** — `artifacts/outputs/non-DL/`
-
-<table>
-<tr><td colspan="2"><img src="artifacts/outputs/non-DL/pysteps_comparison_top_p99_sample04_2024-06-30.png" width="100%" alt="pySTEPS storm sample comparison"></td></tr>
-<tr>
-<td width="50%"><img src="artifacts/outputs/non-DL/pysteps_bar_ets_csi.png" width="100%" alt="pySTEPS ETS/CSI bar chart"></td>
-<td width="50%"><img src="artifacts/outputs/non-DL/pysteps_bar_mae_mse_psnr_ssim.png" width="100%" alt="pySTEPS MAE/MSE/PSNR/SSIM bar chart"></td>
-</tr>
-</table>
-
-Each pipeline also writes a `dl_fullimage_mean_metrics.csv` (DL models)
-or `lk_extrapolation_radar_multimodal_mean_metrics.csv` (pySTEPS) next
-to its figures — the numeric summary behind the charts above. All three
-directories fill up automatically as you run inference/baseline
-scripts; the filenames shown here are simply the examples currently
-checked in.
-
+  
 ## Author
 
 **Atikul Islam Sajib**
