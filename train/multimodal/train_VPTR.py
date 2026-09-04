@@ -59,30 +59,30 @@ class MultiHorizonTrainingConfig:
     metadata_val   = 'metadata_patch/val_patch_256x256_s128_summer_sampled.csv'
     config_yml     = 'config/config.yml'
 
-    operational_threshold    = 10.0
+    operational_threshold    = 15.0
     storm_threshold_json     = 'metadata/storm_threshold.json'
     use_extreme_from_data    = False
-    manual_extreme_threshold = 20.0
+    manual_extreme_threshold = 35.0
 
     checkpoint_dir = 'CHECKPOINTS_VPTR_PATCH_1KM_SUMMER_2H_2015_to_2024_t15_to_t60_PRE_FINAL'
     train_viz_dir  = 'TRAINVIS_VPTR_PATCH_1KM_SUMMER_2H_2015_to_2024_t15_to_t60_PRE_FINAL'
     val_viz_dir    = 'VALVIZ_VPTR_PATCH_1KM_SUMMER_2H_2015_to_2024_t15_to_t60_PRE_FINAL'
 
+  
     num_epochs = 50
 
-    batch_size                  = 32
-    gradient_accumulation_steps = 1
+    batch_size                  = 16
+    gradient_accumulation_steps = 2
     num_workers                 = 24
-    prefetch_factor             = 4
+    prefetch_factor             = 2
 
-    learning_rate = 5e-5
-    weight_decay  = 1e-5
-    grad_clip     = 0.3
+    learning_rate = 1e-4
+    weight_decay  = 1e-3
+    grad_clip     = 0.5
 
     use_mixed_precision = True
 
-    patience  = 50
-
+    patience  = 30
     min_delta = 1e-4
 
     ets_report_epochs = 1
@@ -93,7 +93,7 @@ class MultiHorizonTrainingConfig:
     one_cycle_pct_start = 0.3
 
     cosine_eta_min = 5e-6
-    cosine_eta_max = 5e-4
+    cosine_eta_max = 5e-5
     cosine_T_max   = 30
     cosine_T_0     = 30
 
@@ -104,7 +104,7 @@ class MultiHorizonTrainingConfig:
 
     num_viz_samples       = 4
     max_batches_to_search = 30
-    viz_every_n_epochs    = 50
+    viz_every_n_epochs    = 15
     viz_min_rain_mmh      = 10.0
 
     storm_min_pixels     = 10
@@ -122,20 +122,20 @@ class MultiHorizonTrainingConfig:
     weight_threshold_5 = 35.0; weight_value_5 = 35.0
 
     use_gradient_loss    = True
-    gradient_loss_weight = 0.1
+    gradient_loss_weight = 0.2
 
     use_perceptual_loss   = False
     perceptual_weight     = 0.1
     perceptual_layers     = ['relu2_2', 'relu3_4']
     perceptual_input_mode = 'repeat'
 
-    horizon_loss_weights = [1.0, 2.0, 3.0, 4.0]
+    horizon_loss_weights = [1.0, 1.5, 2.0, 2.5]
 
     compute_verification_metrics = True
     ets_threshold_mmh            = 5.0
 
     compute_extreme_metrics  = True
-    extreme_threshold_mmh    = 10.0
+    extreme_threshold_mmh    = 15.0
 
     beta1 = 0.9
     beta2 = 0.999

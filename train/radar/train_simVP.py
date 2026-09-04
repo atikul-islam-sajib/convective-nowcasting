@@ -58,27 +58,27 @@ class MultiHorizonTrainingConfig:
     metadata_val   = 'metadata_patch/val_patch_256x256_s128_summer_sampled.csv'
     config_yml     = 'config/config.yml'
 
-    operational_threshold    = 10.0
+    operational_threshold    = 15.0
     storm_threshold_json     = 'metadata/storm_threshold.json'
     use_extreme_from_data    = False
-    manual_extreme_threshold = 20.0
+    manual_extreme_threshold = 35.0
 
     checkpoint_dir = 'CHECKPOINTS_SIMVP_PATCH_1KM_SUMMER_2H_2015_to_2024_t15_to_t60_RADAR'
     train_viz_dir  = 'TRAINVIS_SIMVP_PATCH_1KM_SUMMER_2H_2015_to_2024_t15_to_t60_RADAR'
     val_viz_dir    = 'VALVIZ_SIMVP_PATCH_1KM_SUMMER_2H_2015_to_2024_t15_to_t60_RADAR'
 
-    num_epochs = 30
+    num_epochs = 50
 
-    batch_size                  = 32
-    gradient_accumulation_steps = 1
+    batch_size                  = 16
+    gradient_accumulation_steps = 2
     num_workers                 = 24
     prefetch_factor             = 2
 
-    learning_rate = 5e-5
+    learning_rate = 1e-4
     weight_decay  = 1e-3
-    grad_clip     = 0.50
+    grad_clip     = 0.5
 
-    use_mixed_precision = False
+    use_mixed_precision = True
 
     patience  = 30
     min_delta = 1e-4
@@ -90,8 +90,8 @@ class MultiHorizonTrainingConfig:
     one_cycle_max_lr    = 3e-4
     one_cycle_pct_start = 0.3
 
-    cosine_eta_min = 1e-6
-    cosine_eta_max = 1e-4
+    cosine_eta_min = 5e-6
+    cosine_eta_max = 5e-5
     cosine_T_max   = 30
     cosine_T_0     = 30
 
@@ -133,14 +133,14 @@ class MultiHorizonTrainingConfig:
     ets_threshold_mmh            = 5.0
 
     compute_extreme_metrics  = True
-    extreme_threshold_mmh    = 10.0
+    extreme_threshold_mmh    = 15.0
 
     beta1 = 0.9
     beta2 = 0.999
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-    resume_from = "CHECKPOINTS_SIMVP_PATCH_1KM_SUMMER_2H_2015_to_2024_t15_to_t60_RADAR/best_ets.pth"
+    resume_from = None
 
     hid_S        = 64
     hid_T        = 256

@@ -75,7 +75,7 @@ class InferenceConfig:
     sat_base   = '/home/fe/sajib/scratch/weather-data/satellite_de_regridded'
 
     channels       = ['CH7', 'CH9']
-    num_in_frames  = 5
+    num_in_frames  = 4 # RADOLAN YW t itself 5 mins precipitation
     stride_minutes = 5
     horizons       = [15, 30, 45, 60]
 
@@ -116,7 +116,7 @@ class InferenceConfig:
     patch_overlap = 64
     patch_blend   = 'cosine'
 
-    num_samples          = 1000
+    num_samples          = None
 
     operational_thr      = 15.0
     extreme_thr          = 35.0

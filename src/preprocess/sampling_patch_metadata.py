@@ -7,8 +7,8 @@ def presample_metadata(
     input_csv,
     output_csv,
     split_name,
-    p99_top_ratio=0.30,
-    prob=0.90,
+    p99_top_ratio=0.35,
+    prob=0.65,
     seed=1,
 ):
     print("=" * 70)
@@ -168,13 +168,13 @@ def get_parser():
     parser.add_argument(
         '--patch_height',
         type=int,
-        default=128,
+        default=256,
         help="Patch height used in generate_metadata_patch.py (default: 128)",
     )
     parser.add_argument(
         '--patch_width',
         type=int,
-        default=128,
+        default=256,
         help="Patch width used in generate_metadata_patch.py (default: 128)",
     )
     parser.add_argument(
@@ -199,13 +199,13 @@ def get_parser():
     parser.add_argument(
         '--p99_top_ratio',
         type=float,
-        default=0.30,
+        default=0.35,
         help="Top bucket ratio: fraction of samples treated as heavy rain (default: 0.30)",
     )
     parser.add_argument(
         '--prob',
         type=float,
-        default=0.90,
+        default=0.65,
         help="Keep probability for top bucket (default: 0.90). Rest kept with (1-prob).",
     )
     

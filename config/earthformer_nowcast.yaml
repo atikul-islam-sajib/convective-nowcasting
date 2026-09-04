@@ -5,7 +5,7 @@
 
 model:
   input_shape:  [4, 256, 256, 3]   # [T, H, W, C_in]  4 timesteps x 3 channels
-  target_shape: [2, 256, 256, 1]   # [T, H, W, C_out] 2 horizons, radar only
+  target_shape: [4, 256, 256, 1]   # [T, H, W, C_out] 2 horizons, radar only : we can define for sat_radar as well.
 
   base_units:  64
   scale_alpha: 1.0

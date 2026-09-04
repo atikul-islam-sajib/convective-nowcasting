@@ -131,7 +131,7 @@ def _process_timepoint(args):
         summer_only,
     ) = args
 
-    if summer_only and current_time.month not in {6, 7, 8}:
+    if summer_only and current_time.month not in {6, 7, 8, 9}:
         return []
 
     history_times = get_history_times(current_time, num_in_frames, stride_minutes)
@@ -323,10 +323,10 @@ def get_parser():
     parser.add_argument('--test_start',  type=str, default='2023-01-01 00:00')
     parser.add_argument('--test_end',    type=str, default='2023-12-31 23:55')
     parser.add_argument('--channels', nargs='+', default=['CH7', 'CH9'])
-    parser.add_argument('--num_in_frames',   type=int, default=9)
+    parser.add_argument('--num_in_frames',   type=int, default=4)
     parser.add_argument('--stride_minutes',  type=int, default=5)
     parser.add_argument('--horizons', nargs='+', type=int, default=[15, 30, 45, 60])
-    parser.add_argument('--t_jump',          type=int, default=15,
+    parser.add_argument('--t_jump',          type=int, default=5,
         help="Minutes between sampled timepoints")
     parser.add_argument('--patch_height', type=int, default=128)
     parser.add_argument('--patch_width',  type=int, default=128)

@@ -11,8 +11,8 @@ satellite:
   fill_value: 0.0
 
 temporal:
-  history_minutes: 30
-  radar_lead_minutes: 15
+  history_minutes: 20
+  radar_lead_minutes: 60
 
 spatial:
   mode: resize
@@ -27,13 +27,13 @@ transform:
     clip_max: null
   radar:
     log_transform: true
-    clip_max: 400.0
+    clip_max: 128.0
 
 patch:
   enabled: false
-  height: 32
-  width: 32
-  stride: 16
+  height: 256
+  width: 256
+  stride: 64
 
 metadata:
   enabled: true
@@ -45,6 +45,12 @@ metadata:
 
 dataset:
   years:
+  - 2015
+  - 2016
+  - 2017
+  - 2018
+  - 2019
+  - 2020
   - 2021
   - 2022
   - 2023
@@ -52,14 +58,14 @@ dataset:
 
 splits:
   train:
-    start: '2023-01-01 00:30:00'
-    end:   '2023-06-30 23:55:00'
+    start: '2015-01-01 00:30:00'
+    end:   '2022-12-31 23:55:00'
   val:
-    start: '2023-07-01 00:00:00'
-    end:   '2023-09-30 23:55:00'
-  test:
-    start: '2023-10-01 00:00:00'
+    start: '2023-01-01 00:00:00'
     end:   '2023-12-31 23:55:00'
+  test:
+    start: '2024-01-01 00:00:00'
+    end:   '2024-12-31 23:55:00'
 
 data_policy:
   nan_handling:
@@ -68,6 +74,6 @@ data_policy:
   mask_nans: true
 
 dataloader:
-  batch_size: 8
-  num_workers: 4
+  batch_size: 16
+  num_workers: 32
   shuffle_train: false

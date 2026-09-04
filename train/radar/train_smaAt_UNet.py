@@ -54,25 +54,26 @@ class MultiHorizonTrainingConfig:
     metadata_val   = 'metadata_patch/val_patch_256x256_s128_summer_sampled.csv'
     config_yml     = 'config/config.yml'
 
-    operational_threshold    = 10.0
+    operational_threshold    = 15.0
     storm_threshold_json     = 'metadata/storm_threshold.json'
     use_extreme_from_data    = False
-    manual_extreme_threshold = 20.0
+    manual_extreme_threshold = 35.0
 
     checkpoint_dir = 'CHECKPOINTS_SMAATUNET_PATCH_1KM_SUMMER_2H_2015_to_2024_t15_to_t60_RADAR'
     train_viz_dir  = 'TRAINVIS_SMAATUNET_PATCH_1KM_SUMMER_2H_2015_to_2024_t15_to_t60_RADAR'
     val_viz_dir    = 'VALVIZ_SMAATUNET_PATCH_1KM_SUMMER_2H_2015_to_2024_t15_to_t60_RADAR'
 
-    num_epochs = 30
+ 
+    num_epochs = 50
 
-    batch_size                  = 32
-    gradient_accumulation_steps = 1
+    batch_size                  = 16
+    gradient_accumulation_steps = 2
     num_workers                 = 24
     prefetch_factor             = 2
 
     learning_rate = 1e-4
     weight_decay  = 1e-3
-    grad_clip     = 0.50
+    grad_clip     = 0.5
 
     use_mixed_precision = True
 
@@ -86,7 +87,7 @@ class MultiHorizonTrainingConfig:
     one_cycle_max_lr    = 3e-4
     one_cycle_pct_start = 0.3
 
-    cosine_eta_min = 1e-5
+    cosine_eta_min = 5e-6
     cosine_eta_max = 5e-5
     cosine_T_max   = 30
     cosine_T_0     = 30
@@ -98,7 +99,7 @@ class MultiHorizonTrainingConfig:
 
     num_viz_samples       = 4
     max_batches_to_search = 30
-    viz_every_n_epochs    = 10
+    viz_every_n_epochs    = 15
     viz_min_rain_mmh      = 10.0
 
     storm_min_pixels     = 10
@@ -111,9 +112,9 @@ class MultiHorizonTrainingConfig:
 
     weight_threshold_1 = 3.0;  weight_value_1 = 3.0
     weight_threshold_2 = 7.0;  weight_value_2 = 7.0
-    weight_threshold_3 = 15.0; weight_value_3 = 15.0  
-    weight_threshold_4 = 25.0; weight_value_4 = 25.0 
-    weight_threshold_5 = 35.0; weight_value_5 = 35.0   
+    weight_threshold_3 = 15.0; weight_value_3 = 15.0
+    weight_threshold_4 = 25.0; weight_value_4 = 25.0
+    weight_threshold_5 = 35.0; weight_value_5 = 35.0
 
     use_gradient_loss    = True
     gradient_loss_weight = 0.2
@@ -123,22 +124,21 @@ class MultiHorizonTrainingConfig:
     perceptual_layers     = ['relu2_2', 'relu3_4']
     perceptual_input_mode = 'repeat'
 
-    # two horizons: t+15 and t+30
     horizon_loss_weights = [1.0, 1.5, 2.0, 2.5]
 
     compute_verification_metrics = True
     ets_threshold_mmh            = 5.0
 
     compute_extreme_metrics  = True
-    extreme_threshold_mmh    = 10.0
+    extreme_threshold_mmh    = 15.0
 
     beta1 = 0.9
     beta2 = 0.999
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-    resume_from = "CHECKPOINTS_SMAATUNET_PATCH_1KM_SUMMER_2H_2015_to_2024_t15_to_t60_RADAR/best_ets.pth"
-
+    resume_from = None
+    
     smaat_kernels_per_layer = 2
     smaat_bilinear          = True
     smaat_reduction_ratio   = 16
