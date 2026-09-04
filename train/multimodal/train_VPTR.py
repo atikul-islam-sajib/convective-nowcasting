@@ -317,7 +317,7 @@ class VPTRWrapper(nn.Module):
     def __init__(
         self,
         num_channels,
-        num_timesteps=5,
+        num_timesteps=4,
         n_horizons=2,
         feat_dim=528,
         n_downsampling=3,
@@ -702,10 +702,10 @@ def save_visualizations(model, loader, epoch, transform, cfg,
 class HybridWeightedMAE(nn.Module):
     def __init__(self,
                  weight_threshold_1=3.0,  weight_value_1=3.0,
-                 weight_threshold_2=7.0,  weight_value_2=8.0,
-                 weight_threshold_3=15.0, weight_value_3=40.0,
-                 weight_threshold_4=25.0, weight_value_4=80.0,
-                 weight_threshold_5=35.0, weight_value_5=120.0):
+                 weight_threshold_2=7.0,  weight_value_2=7.0,
+                 weight_threshold_3=15.0, weight_value_3=15.0,
+                 weight_threshold_4=25.0, weight_value_4=25.0,
+                 weight_threshold_5=35.0, weight_value_5=35.0):
         super().__init__()
         self.weight_threshold_1 = weight_threshold_1; self.weight_value_1 = weight_value_1
         self.weight_threshold_2 = weight_threshold_2; self.weight_value_2 = weight_value_2
@@ -737,10 +737,10 @@ class HybridWeightedMAE(nn.Module):
 class HybridWeightedMSE(nn.Module):
     def __init__(self,
                  weight_threshold_1=3.0,  weight_value_1=3.0,
-                 weight_threshold_2=7.0,  weight_value_2=8.0,
-                 weight_threshold_3=15.0, weight_value_3=40.0,
-                 weight_threshold_4=25.0, weight_value_4=80.0,
-                 weight_threshold_5=35.0, weight_value_5=120.0):
+                 weight_threshold_2=7.0,  weight_value_2=7.0,
+                 weight_threshold_3=15.0, weight_value_3=15.0,
+                 weight_threshold_4=25.0, weight_value_4=25.0,
+                 weight_threshold_5=35.0, weight_value_5=35.0):
         super().__init__()
         self.weight_threshold_1 = weight_threshold_1; self.weight_value_1 = weight_value_1
         self.weight_threshold_2 = weight_threshold_2; self.weight_value_2 = weight_value_2

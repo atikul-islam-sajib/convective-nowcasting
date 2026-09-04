@@ -708,10 +708,10 @@ def save_visualizations(model, loader, epoch, transform, cfg,
 class HybridWeightedMAE(nn.Module):
     def __init__(self,
                  weight_threshold_1=3.0,  weight_value_1=3.0,
-                 weight_threshold_2=7.0,  weight_value_2=8.0,
-                 weight_threshold_3=15.0, weight_value_3=40.0,
-                 weight_threshold_4=25.0, weight_value_4=80.0,
-                 weight_threshold_5=35.0, weight_value_5=120.0):
+                 weight_threshold_2=7.0,  weight_value_2=7.0,
+                 weight_threshold_3=15.0, weight_value_3=15.0,
+                 weight_threshold_4=25.0, weight_value_4=25.0,
+                 weight_threshold_5=35.0, weight_value_5=35.0):
         super().__init__()
         self.weight_threshold_1 = weight_threshold_1; self.weight_value_1 = weight_value_1
         self.weight_threshold_2 = weight_threshold_2; self.weight_value_2 = weight_value_2
@@ -744,10 +744,10 @@ class HybridWeightedMSE(nn.Module):
     """5-tier weighted MSE -- same threshold/weight structure as HybridWeightedMAE."""
     def __init__(self,
                  weight_threshold_1=3.0,  weight_value_1=3.0,
-                 weight_threshold_2=7.0,  weight_value_2=8.0,
-                 weight_threshold_3=15.0, weight_value_3=40.0,
-                 weight_threshold_4=25.0, weight_value_4=80.0,
-                 weight_threshold_5=35.0, weight_value_5=120.0):
+                 weight_threshold_2=7.0,  weight_value_2=7.0,
+                 weight_threshold_3=15.0, weight_value_3=15.0,
+                 weight_threshold_4=25.0, weight_value_4=25.0,
+                 weight_threshold_5=35.0, weight_value_5=35.0):
         super().__init__()
         self.weight_threshold_1 = weight_threshold_1; self.weight_value_1 = weight_value_1
         self.weight_threshold_2 = weight_threshold_2; self.weight_value_2 = weight_value_2
@@ -1241,7 +1241,7 @@ def train(model, train_loader, val_loader, cfg, transform,
             cfg.weight_threshold_4, cfg.weight_value_4,
             cfg.weight_threshold_5, cfg.weight_value_5,
         ).to(cfg.device)
-        print("HybridWeightedMAE [5 thresholds: 3/7/15/25/35mm/h -> 3/8/20/40/80x]\n")
+        print("HybridWeightedMAE [5 thresholds: 3/7/15/25/35mm/h -> 3/7/15/25/35x]\n")
     elif cfg.loss_type == 'hybrid_weighted_mse':
         loss_fn = HybridWeightedMSE(
             cfg.weight_threshold_1, cfg.weight_value_1,
@@ -1250,7 +1250,7 @@ def train(model, train_loader, val_loader, cfg, transform,
             cfg.weight_threshold_4, cfg.weight_value_4,
             cfg.weight_threshold_5, cfg.weight_value_5,
         ).to(cfg.device)
-        print("HybridWeightedMSE [5 thresholds: 3/7/15/25/35mm/h -> 3/8/20/40/80x]\n")
+        print("HybridWeightedMSE [5 thresholds: 3/7/15/25/35mm/h -> 3/7/15/25/35x]\n")
     else:
         raise ValueError(f"Unknown loss_type: {cfg.loss_type}")
 

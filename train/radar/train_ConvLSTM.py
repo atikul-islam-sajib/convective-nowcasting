@@ -163,7 +163,7 @@ class MultiHorizonTrainingConfig:
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     resume_from = None
-    
+
     mlflow_experiment   = 'nowcasting_convlstm_patch_2015_to_2024_t15_to_t60'
     mlflow_run_name     = 'patch256_2H_convlstm_wmae_gradloss_2015_to_2024_t15_to_t60'
     mlflow_tracking_uri = 'mlruns'
@@ -646,10 +646,10 @@ def save_visualizations(model, loader, epoch, transform, cfg,
 class HybridWeightedMAE(nn.Module):
     def __init__(self,
                  weight_threshold_1=3.0,  weight_value_1=3.0,
-                 weight_threshold_2=7.0,  weight_value_2=8.0,
-                 weight_threshold_3=15.0, weight_value_3=40.0,
-                 weight_threshold_4=25.0, weight_value_4=80.0,
-                 weight_threshold_5=35.0, weight_value_5=120.0):
+                 weight_threshold_2=7.0,  weight_value_2=7.0,
+                 weight_threshold_3=15.0, weight_value_3=15.0,
+                 weight_threshold_4=25.0, weight_value_4=25.0,
+                 weight_threshold_5=35.0, weight_value_5=35.0):
         super().__init__()
         self.weight_threshold_1 = weight_threshold_1; self.weight_value_1 = weight_value_1
         self.weight_threshold_2 = weight_threshold_2; self.weight_value_2 = weight_value_2
@@ -682,10 +682,10 @@ class HybridWeightedMSE(nn.Module):
     """5-tier weighted MSE -- same threshold/weight structure as HybridWeightedMAE."""
     def __init__(self,
                  weight_threshold_1=3.0,  weight_value_1=3.0,
-                 weight_threshold_2=7.0,  weight_value_2=8.0,
-                 weight_threshold_3=15.0, weight_value_3=40.0,
-                 weight_threshold_4=25.0, weight_value_4=80.0,
-                 weight_threshold_5=35.0, weight_value_5=120.0):
+                 weight_threshold_2=7.0,  weight_value_2=7.0,
+                 weight_threshold_3=15.0, weight_value_3=15.0,
+                 weight_threshold_4=25.0, weight_value_4=25.0,
+                 weight_threshold_5=35.0, weight_value_5=35.0):
         super().__init__()
         self.weight_threshold_1 = weight_threshold_1; self.weight_value_1 = weight_value_1
         self.weight_threshold_2 = weight_threshold_2; self.weight_value_2 = weight_value_2
