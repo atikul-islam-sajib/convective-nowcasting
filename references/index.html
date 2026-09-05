@@ -1,0 +1,1272 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Deep learning architectures for convective precipitation nowcasting using radar and satellite observations">
+      
+      
+      
+      
+        <link rel="prev" href="../results/">
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>References - Convective Nowcasting</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#references" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Convective Nowcasting" class="md-header__button md-logo" aria-label="Convective Nowcasting" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Convective Nowcasting
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              References
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/atikul-islam-sajib/convective-nowcasting" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Convective Nowcasting" class="md-nav__button md-logo" aria-label="Convective Nowcasting" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Convective Nowcasting
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/atikul-islam-sajib/convective-nowcasting" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Pipeline
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Data Pipeline
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../data/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../data/preprocessing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Preprocessing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../data/statistics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Statistics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../data/config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Models
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Models
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../models/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../models/convlstm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ConvLSTM
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../models/simvp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SimVP
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../models/smaat-unet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SmaAt-UNet
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../models/earthformer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    EarthFormer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../models/vptr/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    VPTR
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Training
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Training
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../training/overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../training/loss/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Loss Function
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../training/metrics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Evaluation Metrics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../inference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Inference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../results/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Results & Findings
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    References
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    References
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#model-architectures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Model architectures
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-sources-and-preprocessing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data sources and preprocessing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#evaluation-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Evaluation metrics
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#baselines-limitations-and-future-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Baselines, limitations, and future work
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#model-architectures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Model architectures
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-sources-and-preprocessing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data sources and preprocessing
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#evaluation-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Evaluation metrics
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#baselines-limitations-and-future-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Baselines, limitations, and future work
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="references">References</h1>
+<p>Full citations for the sources referenced throughout this documentation,
+drawn from the thesis bibliography.</p>
+<h2 id="model-architectures">Model architectures</h2>
+<ul>
+<li><strong>[16]</strong> Xingjian Shi, Zhourong Chen, Hao Wang, Dit-Yan Yeung, Wai-Kin Wong,
+  and Wang-chun Woo. <em>Convolutional LSTM network: A machine learning
+  approach for precipitation nowcasting.</em> NeurIPS, 28:802–810, 2015.
+  <a href="https://arxiv.org/abs/1506.04214">arXiv:1506.04214</a></li>
+<li><strong>[17]</strong> Sepp Hochreiter and Jürgen Schmidhuber. <em>Long short-term memory.</em>
+  Neural Computation, 9(8):1735–1780, 1997.</li>
+<li><strong>[5]</strong> Jie Shi, Aleksej Cornelissen, and Siamak Mehrkanoon. <em>Integrating
+  weather station data and radar for precipitation nowcasting: SmaAt-Fusion
+  and SmaAt-Krige-GNet.</em> arXiv:2502.16116, 2025.</li>
+<li><strong>[18]</strong> Olaf Ronneberger, Philipp Fischer, and Thomas Brox. <em>U-Net:
+  Convolutional networks for biomedical image segmentation.</em> MICCAI,
+  234–241, 2015. <a href="https://arxiv.org/abs/1505.04597">arXiv:1505.04597</a></li>
+<li><strong>[6]</strong> Zhihan Gao, Xingjian Shi, Hao Wang, Yi Zhu, Yuyang Wang, Mu Li, and
+  Dit-Yan Yeung. <em>Earthformer: Exploring space-time transformers for earth
+  system forecasting.</em> NeurIPS, 35:25390–25403, 2022.
+  <a href="https://arxiv.org/abs/2207.05833">arXiv:2207.05833</a></li>
+<li><strong>[54]</strong> Zhangyang Gao, Cheng Tan, Lirong Wu, and Stan Z. Li. <em>SimVP:
+  Simpler yet better video prediction.</em> CVPR, 3170–3180, 2022.
+  <a href="https://arxiv.org/abs/2206.05099">arXiv:2206.05099</a></li>
+<li><strong>[55]</strong> Xi Ye and Guillaume-Alexandre Bilodeau. <em>VPTR: Efficient
+  transformers for video prediction.</em> ICPR, 3492–3499, 2022.
+  <a href="https://arxiv.org/abs/2203.15836">arXiv:2203.15836</a></li>
+<li><strong>[56]</strong> Balaji Lakshminarayanan, Alexander Pritzel, and Charles Blundell.
+  <em>Simple and scalable predictive uncertainty estimation using deep
+  ensembles.</em> NeurIPS, 30, 2017.</li>
+<li><strong>[52]</strong> Ilya Sutskever, Oriol Vinyals, and Quoc V. Le. <em>Sequence to
+  sequence learning with neural networks.</em> NeurIPS, 27:3104–3112, 2014.</li>
+<li><strong>[53]</strong> Sylwester Klocek et al. <em>MS-Nowcasting: Operational precipitation
+  nowcasting with convolutional LSTMs at Microsoft Weather.</em> NeurIPS 2021
+  Workshop on Tackling Climate Change with ML, 2021.</li>
+</ul>
+<h2 id="data-sources-and-preprocessing">Data sources and preprocessing</h2>
+<ul>
+<li><strong>[37]</strong> EUMETSAT. <em>Rapid Scan High Rate SEVIRI Level 1.5 image data –
+  MSG.</em> <a href="https://user.eumetsat.int/catalogue/EO:EUM:DAT:MSG:MSG15-RSS">EUMETSAT Data Portal</a>,
+  2024.</li>
+<li><strong>[39]</strong> Zeqing Huang, Tongtiegang Zhao, Rongbiao Lai, Yu Tian, and Fang
+  Yang. <em>A comprehensive implementation of the log, Box–Cox and log-sinh
+  transformations for skewed and censored precipitation data.</em> Journal of
+  Hydrology, 620:129347, 2023.</li>
+<li><strong>[40]</strong> Chittaranjan Andrade. <em>Z scores, standard scores, and composite
+  test scores explained.</em> Indian Journal of Psychological Medicine,
+  43(6):555–557, 2021.</li>
+<li><strong>[41]</strong> Tamás Frajka and Kenneth Zeger. <em>Downsampling dependent
+  upsampling of images.</em> Signal Processing: Image Communication,
+  19(3):257–265, 2004.</li>
+<li><strong>[42]</strong> Haonan Chen, V. Chandrasekar, Robert Cifelli, and Pingping Xie.
+  <em>A machine learning system for precipitation estimation using satellite
+  and ground radar network observations.</em> IEEE TGRS, 58(2):982–994, 2020.</li>
+<li><strong>[45]</strong> Connor Shorten and Taghi M. Khoshgoftaar. <em>A survey on image data
+  augmentation for deep learning.</em> Journal of Big Data, 6(1):60, 2019.</li>
+<li><strong>[46]</strong> Atharva Deshpande, Kaushik Gopalan, Jeet Shah, and Hrishikesh
+  Simu. <em>A conditional generative adversarial network model for the
+  Weather4cast 2024 challenge.</em> arXiv:2412.00451, 2024.</li>
+<li><strong>[47]</strong> N. V. Chawla, K. W. Bowyer, L. O. Hall, and W. P. Kegelmeyer.
+  <em>SMOTE: Synthetic minority over-sampling technique.</em> Journal of
+  Artificial Intelligence Research, 16:321–357, 2002.</li>
+<li><strong>[48]</strong> Yuan Cao, Lei Chen, Danchen Zhang, Leiming Ma, and Hongming Shan.
+  <em>Hybrid weighting loss for precipitation nowcasting from radar images.</em>
+  IEEE ICASSP, 2022.</li>
+<li><strong>[50]</strong> Mariana Oliveira, Luís Torgo, and Vítor Santos Costa. <em>Evaluation
+  procedures for forecasting with spatiotemporal data.</em> Mathematics,
+  9(6):691, 2021.</li>
+</ul>
+<h2 id="evaluation-metrics">Evaluation metrics</h2>
+<ul>
+<li><strong>[58]</strong> Trevor Hastie, Robert Tibshirani, and Jerome Friedman. <em>The
+  Elements of Statistical Learning: Data Mining, Inference, and
+  Prediction.</em> Springer, 2009.</li>
+<li><strong>[59]</strong> T. Chai and R. R. Draxler. <em>Root mean square error (RMSE) or mean
+  absolute error (MAE)? – Arguments against avoiding RMSE in the
+  literature.</em> Geoscientific Model Development, 7(3):1247–1250, 2014.</li>
+<li><strong>[60]</strong> Ian Goodfellow, Yoshua Bengio, and Aaron Courville. <em>Deep
+  Learning.</em> MIT Press, 2016.</li>
+<li><strong>[61]</strong> Daniel S. Wilks. <em>Statistical Methods in the Atmospheric
+  Sciences.</em> Academic Press, 3rd edition, 2011.</li>
+<li><strong>[62]</strong> Chung-Chieh Wang. <em>On the calculation and correction of equitable
+  threat score for model quantitative precipitation forecasts for small
+  verification areas: The example of Taiwan.</em> Weather and Forecasting,
+  29(4):788–798, 2014.</li>
+<li><strong>[63]</strong> Q. Huynh-Thu and M. Ghanbari. <em>Scope of validity of PSNR in
+  image/video quality assessment.</em> Electronics Letters, 44(13):800–801,
+  2008.</li>
+<li><strong>[64]</strong> Elizabeth E. Ebert. <em>Fuzzy verification of high-resolution
+  gridded forecasts: A review and proposed framework.</em> Meteorological
+  Applications, 15(1):51–64, 2008. <em>(source of the "double penalty problem"
+  discussed in <a href="../results/">Results &amp; Findings</a>)</em></li>
+</ul>
+<h2 id="baselines-limitations-and-future-work">Baselines, limitations, and future work</h2>
+<ul>
+<li><strong>[12]</strong> Seppo Pulkkinen, Daniele Nerini, Andrés A. Pérez Hortal, Carlos
+  Velasco-Forero, Alan Seed, Urs Germann, and Loris Foresti. <em>pySTEPS: An
+  open-source Python library for probabilistic precipitation nowcasting
+  (v1.0).</em> Geoscientific Model Development, 12(10):4185–4219, 2019.</li>
+<li><strong>[3]</strong> Urs Germann and Isztar Zawadzki. <em>Scale-dependence of the
+  predictability of precipitation from continental radar images. Part I:
+  Description of the methodology.</em> Monthly Weather Review,
+  130(12):2859–2873, 2002.</li>
+<li><strong>[20]</strong> Yan Ji, Bing Gong, Michael Langguth, Amirpasha Mozaffari, and
+  Xiefei Zhi. <em>CL-GAN: A generative adversarial network (GAN)-based video
+  prediction model for precipitation nowcasting.</em> Geoscientific Model
+  Development, 16:2737–2752, 2023.</li>
+<li><strong>[22]</strong> Jussi Leinonen, Ulrich Hamann, Daniele Nerini, Urs Germann, and
+  Gabriele Franch. <em>Latent diffusion models for generative precipitation
+  nowcasting with accurate uncertainty quantification.</em> arXiv:2304.12891,
+  2023.</li>
+<li><strong>[65]</strong> Hong Wang, Dehui Chen, Jinfang Yin, Daosheng Xu, Guangfeng Dai,
+  and Luwen Chen. <em>An improvement of convective precipitation nowcasting
+  through lightning data dynamic nudging in a cloud-resolving scale
+  forecasting system.</em> Atmospheric Research, 242:104994, 2020.</li>
+<li><strong>[66]</strong> Fuzhen Zhuang, Zhiyuan Qi, Keyu Duan, Dongbo Xi, Yongchun Zhu,
+  Hengshu Zhu, Hui Xiong, and Qing He. <em>A comprehensive survey on transfer
+  learning.</em> Proceedings of the IEEE, 109(1):43–76, 2021.</li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Bracketed numbers <code>[N]</code> match the citation numbering used in the
+thesis itself, so they can be cross-referenced directly against the
+full Bibliography in the submitted document.</p>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.expand", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>
