@@ -3,205 +3,145 @@
 Convective precipitation is highly localized and evolves continuously over
 short timescales, making short-term precipitation forecasting particularly
 challenging despite its importance for early warning and weather-sensitive
-operations. This thesis evaluates five deep learning architectures for
+operations. This repository evaluates five deep learning architectures for
 convective precipitation nowcasting over Germany and investigates whether
 combining radar and satellite observations improves forecasting performance
-compared with a radar-only configuration. The models were trained using
-paired RADOLAN radar and SEVIRI satellite observations collected between
-2015 and 2024. In addition to the five individual architectures, an
-ensemble combining their predictions was also evaluated. Forecast
-performance was assessed at lead times of 15, 30, 45, and 60 minutes using
-both continuous and categorical evaluation metrics. No single architecture
-performed best across all metrics. The ensemble achieved the strongest
-overall performance, whereas VPTR showed the highest categorical skill,
-particularly at longer lead times. Integrating satellite observations
-consistently improved forecast quality, with the largest gains observed at
-longer prediction horizons. Severe convective precipitation remained the
-most difficult to predict because such events were underrepresented in the
-training data. These findings demonstrate the importance of both model
-architecture and multimodal observations for improving convective
-precipitation nowcasting.
+compared with a radar-only configuration. Models were trained using paired
+RADOLAN radar and SEVIRI satellite observations collected between 2015 and
+2024, with an ensemble of all five architectures also evaluated. No single
+architecture performed best across all metrics: VPTR achieved the strongest
+individual performance overall, particularly at longer lead times, while
+the ensemble was competitive at shorter horizons but did not consistently
+outperform the best individual model. Integrating satellite observations
+generally improved forecast quality for the deep learning models, though
+this benefit did not extend to the extrapolation-based baseline.
 
-## Contents
-
-- [Overview](#overview)
-- [Repository layout](#repository-layout)
-- [Requirements](#requirements)
-- [Installation](#installation)
-  - [Local (pip)](#local-pip)
-  - [Docker (recommended)](#docker-recommended)
-- [Data preparation](#data-preparation)
-- [Configuration](#configuration)
-- [Training](#training)
-  - [Multimodal (satellite + radar)](#multimodal-satellite--radar)
-  - [Radar-only](#radar-only)
-  - [pySTEPS baseline](#pysteps-baseline)
-- [Inference](#inference)
-- [Experiment tracking (MLflow)](#experiment-tracking-mlflow)
-- [Models](#models)
-- [Outputs](#outputs)
-  - [Example outputs](#example-outputs)
-- [Author](#author)
-- [License](#license)
+**Full documentation:** https://atikul-islam-sajib.github.io/convective-nowcasting/
 
 ## Overview
 
 Two input modes are supported end-to-end (data loading, training, and
-inference):
+inference), sharing the same dataset class, loss functions, and evaluation
+metrics — only the input channel count differs:
 
-| Mode          | Input                                   | Scripts live in    |
-|---------------|------------------------------------------|---------------------|
-| **Multimodal**| Radar history + Meteosat CH7/CH9 history  | `train/multimodal/` |
-| **Radar-only**| Radar history only                        | `train/radar/`      |
+| Mode | Input | Scripts |
+|---|---|---|
+| **Multimodal** | Radar + SEVIRI CH7/CH9, 4 frames (12 channels) | `train/multimodal/` |
+| **Radar-only** | Radar only, 4 frames (4 channels) | `train/radar/` |
 
-Both modes share the same underlying dataset class
-(`src/datasets/satellite_radar_patch_dataset.py`), loss functions,
-verification metrics (ETS/CSI), and visualization pipeline — only the
-input channel count and a `radar_only` flag differ.
+Five architectures are implemented under `src/models/`, each with a
+matching training script in both configurations: **ConvLSTM**, **SimVP**,
+**SmaAt-UNet**, **EarthFormer**, **VPTR**. A classical **pySTEPS**
+extrapolation baseline is included for comparison against a non-deep-learning
+approach.
 
-Five deep learning backbones are implemented under `src/models/`, each with
-a matching training script in both `train/multimodal/` and `train/radar/`:
+## Input / output sequence
 
-- **SmaAt-UNet** — `train_smaAt_UNet.py`
-- **ConvLSTM** — `train_ConvLSTM.py`
-- **SimVP** — `train_simVP.py`
-- **EarthFormer** (CuboidTransformer) — `train_earthformer.py`
-- **VPTR** — `train_VPTR.py`
+At each reference time $t$, the input sequence consists of 4 consecutive
+frames, each covering a 5-minute observation period:
 
-A classical optical-flow baseline (**pySTEPS**) is provided in
-`train/pySTEPS/train_baseline.py` for non-DL comparison.
+$$
+\mathcal{X}_t = \left\{ x_t^{(1)}, x_t^{(2)}, x_t^{(3)}, x_t^{(4)} \right\}
+$$
 
-## Repository layout
+The model predicts the radar precipitation field at 4 future lead times:
 
-```
-convective-nowcasting/
-├── config/                       # YAML configs (data paths, model hparams)
-│   ├── config.yml
-│   └── earthformer_nowcast.yaml
-├── metadata/                     # Precomputed sample index, channel stats
-├── src/
-│   ├── datasets/                 # PyTorch Dataset classes
-│   ├── dataloaders/               # DataLoader construction helpers
-│   ├── models/                   # Model source (convlstm, simvp,
-│   │                              #   earthformer, vptr, smaat_unet, unet, ...)
-│   ├── preprocess/                # Metadata / stats generation scripts
-│   └── utils/                    # Config loading, transforms, IO, etc.
-├── train/
-│   ├── multimodal/                # Satellite + radar training scripts
-│   ├── radar/                     # Radar-only training scripts
-│   └── pySTEPS/                   # Classical baseline
-├── visualization/                # Standalone plotting utilities
-├── unittest/                     # Sanity checks for the data pipeline
-├── slurms/                       # SLURM batch scripts for cluster jobs
-├── artifacts/outputs/            # Saved figures / evaluation outputs
-├── Dockerfile.multimodal
-├── Dockerfile.radar
-├── requirements.txt
-└── setup.py
-```
+$$
+\mathcal{Y} = \left\{ y_{t+15},\; y_{t+30},\; y_{t+45},\; y_{t+60} \right\}
+$$
 
-Model checkpoints, MLflow runs, and training-visualization PNGs are written
-at runtime (not checked into the repo) — see [Outputs](#outputs).
+| Configuration | Input shape | Output shape |
+|---|---|---|
+| Multimodal (radar + CH7 + CH9) | `(4, 3, 256, 256)` | `(4, 256, 256)` |
+| Radar-only | `(4, 1, 256, 256)` | `(4, 256, 256)` |
 
-## Requirements
+## Loss function
 
-- Python 3.10 or 3.11
-- A CUDA-capable GPU (EarthFormer and VPTR are the most memory-hungry;
-  budget accordingly)
-- See `requirements.txt` for the full Python dependency list
-  (PyTorch, torchvision, numpy, pandas, matplotlib, scikit-image, scipy,
-  einops, omegaconf, tqdm, mlflow, PyYAML)
+All models are trained with a hybrid loss combining an intensity-weighted
+MAE, a gradient sharpness penalty, and horizon-dependent weighting:
+
+$$
+\mathcal{L}_h = \frac{1}{|\mathcal{M}|} \sum_{(x,y)\in\mathcal{M}}
+w(x,y)\,\big|\hat{y}_{x,y,h} - y_{x,y,h}\big| + \lambda\,\mathcal{L}_{\text{grad},h}
+$$
+
+$$
+\mathcal{L}_{\text{total}} = \sum_{h=1}^{4} \bar{w}_h\,\mathcal{L}_h
+$$
+
+where $w(x,y)$ up-weights heavier rainfall intensities, $\mathcal{L}_{\text{grad},h}$
+penalizes over-smoothed predictions ($\lambda = 0.2$), and $\bar{w}_h$
+emphasizes longer lead times.
+
+## Evaluation metrics
+
+Models are compared on the held-out test set using five metrics — MAE and
+MSE (lower is better), CSI, ETS, and PSNR (higher is better):
+
+$$
+\text{CSI} = \frac{H}{H+M+FA}, \qquad
+\text{ETS} = \frac{H-H_c}{H+M+FA-H_c}, \qquad
+H_c = \frac{(H+M)(H+FA)}{N}
+$$
+
+where $H$, $M$, $FA$ are hits, misses, and false alarms at a given
+precipitation threshold, and $H_c$ is the number of hits expected by
+chance. **ETS is used as the model-selection criterion** on the validation
+set, since it corrects for chance agreement on this class-imbalanced data.
+Full derivations for MAE, MSE, and PSNR are in the
+[documentation](https://atikul-islam-sajib.github.io/convective-nowcasting/).
 
 ## Installation
-
-### Local (pip)
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-pip install -e .          # installs this repo as an editable package (setup.py)
-```
-
-### Docker (recommended)
-
-Two images are provided — one per input mode — with no training script
-baked in, so you pick which model to run at `docker run` time.
-
-```bash
-# Build (from the repo root)
-docker build -t nowcast-multimodal -f Dockerfile.multimodal .
-docker build -t nowcast-radar      -f Dockerfile.radar .
-
-# Sanity-check GPU visibility inside each image
-docker run --rm --gpus all nowcast-multimodal python -c \
-    "import torch; print(torch.__version__, torch.cuda.is_available())"
-
-# Run any model (mount the repo so code/checkpoints/data are visible)
-docker run --gpus all --shm-size=8g -v $(pwd):/workspace nowcast-multimodal \
-    python train/multimodal/train_ConvLSTM.py
-
-docker run --gpus all --shm-size=8g -v $(pwd):/workspace nowcast-radar \
-    python train/radar/train_simVP.py
-```
-
-For long runs, launch detached and tail the logs:
-
-```bash
-docker run -d --gpus all --shm-size=8g --restart unless-stopped \
-    -v $(pwd):/workspace --name train-simvp-multimodal \
-    nowcast-multimodal python train/multimodal/train_simVP.py
-
-docker logs -f train-simvp-multimodal
+pip install -e .
 ```
 
 ## Data preparation
 
-Raw inputs are per-timestep `.npy` radar frames (`radar_de/`) and
-per-channel satellite frames (`satellite_de_regridded/`). Before training,
-run the preprocessing scripts in `src/preprocess/` in order:
+Raw inputs are per-timestep `.npy` radar frames and per-channel satellite
+frames. Before training, the following preprocessing steps are applied
+(see `src/preprocess/`):
 
-| Step | Script | Purpose → Output |
-|------|--------|-------------------|
-| 1 | `compute_mean_std_satellite.py` | Per-channel satellite normalization stats → `metadata/channel_stats.json` |
-| 2 | `generate_metadata_multihorizon.py` / `generate_metadata_multihorizon_season.py` | Builds the sample index (valid `reference_time` → history/target timestamp pairs) across all forecast horizons → `metadata/all_samples.csv` |
-| 3 | `generate_metadata_patch.py` | Expands the full-image index into fixed-size training patches with row/col offsets |
-| 4 | `sampling_patch_metadata.py` | Subsamples patches (e.g. to balance rain intensity) into the `train`/`val` CSVs referenced by the training configs |
-| 5 | `global_quantile_threshold_multihorizon.py` / `compute_presample_thresholds.py` | Computes rain-rate percentile thresholds → `metadata/storm_threshold.json` |
-| 6 | `generate_test_data_full_image.py` | Builds the held-out full-image (unpatched) evaluation set used by `inference.py` |
+1. **Regridding** — satellite pixels are reprojected via their geographic
+   coordinates onto the fixed 1100x900 radar grid using bilinear
+   interpolation (nearest-neighbour fallback), so radar and satellite
+   pixels correspond to the same location.
+2. **Normalization** — radar values are log-transformed and clipped at
+   128 mm/h; satellite channels are Z-score normalized using
+   training-set statistics.
+3. **Patch extraction** — 256x256 patches (stride 64) are extracted from
+   the full radar/satellite grid.
+4. **Two-bucket quantile sampling** — patches are split into a "heavy
+   rain" bucket (top 40% by 99th-percentile intensity) and the rest,
+   then resampled to roughly balance the two, addressing the natural
+   imbalance between dry and precipitating pixels.
+5. **Metadata generation** — sample windows (4 input frames, 4 forecast
+   horizons at 15/30/45/60 min) are indexed into CSV files consumed
+   directly by the data loaders.
 
-Equivalent SLURM wrappers for a subset of these steps are in `slurms/`.
-
-Before a real training run, verify the pipeline end-to-end with:
-
-```bash
-python unittest/sanity_check_dataloader_pipeline.py
-```
+Run the pipeline scripts in `src/preprocess/` in order; see the
+[full documentation](https://atikul-islam-sajib.github.io/convective-nowcasting/)
+for the exact script sequence and configuration options.
 
 ## Configuration
 
-| File | Contents |
-|------|----------|
-| `config/config.yml` | Shared settings: data paths, satellite channels, temporal history/cadence, forecast horizons, spatial transform, NaN-handling policy |
-| `config/earthformer_nowcast.yaml` | EarthFormer/CuboidTransformer architecture hyperparameters. Its `input_shape` must match `[n_timesteps, 256, 256, n_channels_per_step]` — `n_channels_per_step` is `3` for multimodal (2 satellite channels + radar) and `1` for radar-only. Each EarthFormer training script asserts this at startup |
-
-Per-model training hyperparameters (learning rate, gradient clipping, mixed
-precision, loss weights, checkpoint/MLflow names) live at the top of each
-`train_*.py` script as a `MultiHorizonTrainingConfig` class — edit there
-rather than in `config.yml`.
+`config/config.yml` holds shared settings: data paths, satellite channels,
+temporal history/cadence, forecast horizons, spatial transform, and
+train/val/test splits (2015-2022 / 2023 / 2024). Per-model training
+hyperparameters live at the top of each `train_*.py` script.
 
 ## Training
 
-Every training script is self-contained: it loads `config.yml`, builds the
-dataset/dataloaders, builds its model, and runs the full train/validate
-loop with checkpointing, ETS/CSI verification, and MLflow logging.
-
-### Multimodal (satellite + radar)
+### Multimodal (radar + satellite)
 
 ```bash
-python train/multimodal/train_smaAt_UNet.py
 python train/multimodal/train_ConvLSTM.py
 python train/multimodal/train_simVP.py
+python train/multimodal/train_smaAt_UNet.py
 python train/multimodal/train_earthformer.py
 python train/multimodal/train_VPTR.py
 ```
@@ -211,80 +151,62 @@ python train/multimodal/train_VPTR.py
 Identical interface, radar history only as input:
 
 ```bash
-python train/radar/train_smaAt_UNet.py
 python train/radar/train_ConvLSTM.py
 python train/radar/train_simVP.py
+python train/radar/train_smaAt_UNet.py
 python train/radar/train_earthformer.py
 python train/radar/train_VPTR.py
 ```
 
 ### pySTEPS baseline
 
+A classical, non-deep-learning extrapolation baseline using Lucas-Kanade
+optical flow, evaluated on the same radar-only and multimodal inputs and
+lead times as the deep learning models:
+
 ```bash
 python train/pySTEPS/train_baseline.py
 ```
 
-Each script writes:
-
-- `CHECKPOINTS_<MODEL>_.../last.pth`, `best.pth`, `best_ets.pth`
-- `TRAINVIS_<MODEL>_.../` and `VALVIZ_<MODEL>_.../` — periodic
-  storm-sample visualization PNGs
-- An MLflow run under `mlruns/` with per-epoch loss, MAE/RMSE/SSIM/PSNR,
-  and ETS/CSI at the configured operational and extreme thresholds
+Unlike the deep learning models, pySTEPS requires no parameter training —
+it estimates a motion field from recent radar frames and extrapolates it
+forward.
 
 ## Inference
 
-Full-image (unpatched, patch-stitched) multi-model comparison and
-ensembling:
+Full-image (patch-stitched) multi-model comparison and ensembling:
 
 ```bash
 python train/multimodal/inference.py --num_samples 10
 python train/radar/inference.py      --num_samples 10
 ```
 
-Useful flags: `--horizons`, `--metadata_csv`, `--out_dir`, `--patch_size`,
-`--patch_overlap`, `--device`, `--show_storm_metrics`. Each run writes
-per-sample comparison figures plus `dl_fullimage_metrics.csv` and
-`dl_fullimage_mean_metrics.csv` to `--out_dir`.
+Each run writes per-sample comparison figures plus metric CSVs to the
+configured output directory.
 
-## Experiment tracking (MLflow)
+## Repository layout
 
-```bash
-mlflow ui --backend-store-uri mlruns
+```
+convective-nowcasting/
+├── config/          # YAML configs (data paths, model hyperparameters)
+├── src/
+│   ├── datasets/    # PyTorch Dataset classes
+│   ├── models/      # ConvLSTM, SimVP, SmaAt-UNet, EarthFormer, VPTR
+│   ├── preprocess/  # Metadata / statistics generation scripts
+│   └── utils/       # Config loading, transforms, IO
+├── train/
+│   ├── multimodal/  # Satellite + radar training and inference
+│   ├── radar/       # Radar-only training and inference
+│   └── pySTEPS/     # Classical baseline
+├── unittest/        # Sanity checks
+└── requirements.txt
 ```
 
-Then open `http://localhost:5000` to compare runs across models, input
-modes, and hyperparameter settings.
-
-## Models
-
-| Model        | Source                          | Notes                                   |
-|--------------|----------------------------------|------------------------------------------|
-| SmaAt-UNet   | `src/models/smaat_unet/`        | Depthwise-separable U-Net + CBAM         |
-| ConvLSTM     | `src/models/convlstm/`          | Encoder–ConvLSTM–Decoder                 |
-| SimVP        | `src/models/simvp/`             | Conv encoder/decoder + Inception temporal blocks |
-| EarthFormer  | `src/models/earthformer/`       | Cuboid-attention spatiotemporal transformer |
-| VPTR         | `src/models/vptr/`              | Non-autoregressive video transformer     |
-| pySTEPS      | `train/pySTEPS/`                 | Classical optical-flow baseline (non-DL) |
-
-`src/models/` also vendors several additional research backbones
-(MCVD, MetNet, PredRNN, Rainformer, SwinLSTM, pix2pixHD) that are not yet
-wired into a `train/` script — see their subdirectories for standalone
-usage.
-
-## Outputs
-
-- `artifacts/outputs/{multimodal,radar,non-DL}/` — saved evaluation
-  figures and summary tables
-- `logs/` — free-form run logs
-- Checkpoints, viz PNGs, and `mlruns/` are created at the repo root by
-  each training script (not tracked in version control by default)
-  
 ## Author
 
 **Atikul Islam Sajib**
 
-Supervisors: Dr. Stefan Edlich, Dr. Noelia Otero Felipe
+Supervisors: Prof. Dr. Stefan Edlich, Dr. Noelia Otero Felipe
 
 ## License
 
