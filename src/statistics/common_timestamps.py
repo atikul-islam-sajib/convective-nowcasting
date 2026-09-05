@@ -3,12 +3,8 @@ from datetime import datetime
 import pandas as pd
 
 
-# ============================================================
-# CONFIGURATION
-# ============================================================
-
 RADAR_ROOT = Path("~/scratch/weather-data/radar_de").expanduser()
-SATELLITE_ROOT = Path("~/scratch/weather-data/satellite_de_regridded").expanduser()  # <-- FIXED: regridded, not raw
+SATELLITE_ROOT = Path("~/scratch/weather-data/satellite_de_regridded").expanduser() 
 
 PATCHES_PER_IMAGE = 154
 
