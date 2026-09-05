@@ -136,41 +136,40 @@ hyperparameters live at the top of each `train_*.py` script.
 
 ## Training
 
-### Multimodal (radar + satellite)
+Both configurations share an identical interface — only the input channel
+count and a `radar_only` flag differ.
+
+**Multimodal (radar + satellite):**
 
 ```bash
-python train/multimodal/train_ConvLSTM.py
-python train/multimodal/train_simVP.py
-python train/multimodal/train_smaAt_UNet.py
-python train/multimodal/train_earthformer.py
-python train/multimodal/train_VPTR.py
+python train/multimodal/train_ConvLSTM.py       # ConvLSTM
+python train/multimodal/train_simVP.py          # SimVP
+python train/multimodal/train_smaAt_UNet.py     # SmaAt-UNet
+python train/multimodal/train_earthformer.py    # EarthFormer
+python train/multimodal/train_VPTR.py           # VPTR
 ```
 
-### Radar-only
-
-Identical interface, radar history only as input:
+**Radar-only:**
 
 ```bash
-python train/radar/train_ConvLSTM.py
-python train/radar/train_simVP.py
-python train/radar/train_smaAt_UNet.py
-python train/radar/train_earthformer.py
-python train/radar/train_VPTR.py
+python train/radar/train_ConvLSTM.py            # ConvLSTM
+python train/radar/train_simVP.py               # SimVP
+python train/radar/train_smaAt_UNet.py          # SmaAt-UNet
+python train/radar/train_earthformer.py         # EarthFormer
+python train/radar/train_VPTR.py                # VPTR
 ```
 
 ### pySTEPS baseline
 
 A classical, non-deep-learning extrapolation baseline using Lucas-Kanade
 optical flow, evaluated on the same radar-only and multimodal inputs and
-lead times as the deep learning models:
+lead times as the deep learning models. Unlike the deep learning models,
+pySTEPS requires no parameter training — it estimates a motion field from
+recent radar frames and extrapolates it forward:
 
 ```bash
 python train/pySTEPS/train_baseline.py
 ```
-
-Unlike the deep learning models, pySTEPS requires no parameter training —
-it estimates a motion field from recent radar frames and extrapolates it
-forward.
 
 ## Inference
 
