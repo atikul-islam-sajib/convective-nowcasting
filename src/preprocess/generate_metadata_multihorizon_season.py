@@ -108,7 +108,7 @@ def generate_metadata_and_split(
     print(f"Summer months      : June, July, August (6, 7, 8)")
     print("=" * 80)
 
-    SUMMER_MONTHS = {6, 7, 8}
+    SUMMER_MONTHS = {6, 7, 8, 9}
 
     tasks = []
     cadence = config.satellite.cadence_minutes

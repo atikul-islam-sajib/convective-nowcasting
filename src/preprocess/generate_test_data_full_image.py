@@ -73,7 +73,7 @@ def _process_timepoint_fullimage(args):
         summer_only,
     ) = args
 
-    if summer_only and current_time.month not in {6, 7, 8}:
+    if summer_only and current_time.month not in {6, 7, 8, 9}:
         return []
 
     history_times = get_history_times(current_time, num_in_frames, stride_minutes)
