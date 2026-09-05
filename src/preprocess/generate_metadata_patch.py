@@ -328,8 +328,8 @@ def get_parser():
     parser.add_argument('--horizons', nargs='+', type=int, default=[15, 30, 45, 60])
     parser.add_argument('--t_jump',          type=int, default=5,
         help="Minutes between sampled timepoints")
-    parser.add_argument('--patch_height', type=int, default=128)
-    parser.add_argument('--patch_width',  type=int, default=128)
+    parser.add_argument('--patch_height', type=int, default=256)
+    parser.add_argument('--patch_width',  type=int, default=256)
     parser.add_argument('--stride_patch', type=int, default=64,
         help="Stride between patches (50% overlap default)")
     parser.add_argument('--grid_rows',    type=int, default=1100)
