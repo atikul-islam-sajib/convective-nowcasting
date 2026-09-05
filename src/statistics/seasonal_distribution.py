@@ -120,7 +120,6 @@ with ThreadPoolExecutor(max_workers=N_WORKERS) as ex:
 
 print(f"\nDone. Skipped {skipped:,} files (all-NaN or unreadable).")
 
-# ── BUILD TABLE ───────────────────────────────────────────────────────────────
 seasons = ["Winter", "Spring", "Summer", "Autumn"]
 
 print("\n")
