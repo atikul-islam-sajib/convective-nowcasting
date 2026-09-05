@@ -7,8 +7,8 @@ def presample_metadata(
     input_csv,
     output_csv,
     split_name,
-    p99_top_ratio=0.35,
-    prob=0.65,
+    p99_top_ratio=0.40,
+    prob=0.60,
     seed=1,
 ):
     print("=" * 70)
@@ -199,14 +199,14 @@ def get_parser():
     parser.add_argument(
         '--p99_top_ratio',
         type=float,
-        default=0.35,
-        help="Top bucket ratio: fraction of samples treated as heavy rain (default: 0.30)",
+        default=0.40,
+        help="Top bucket ratio: fraction of samples treated as heavy rain (default: 0.40)",
     )
     parser.add_argument(
         '--prob',
         type=float,
-        default=0.65,
-        help="Keep probability for top bucket (default: 0.90). Rest kept with (1-prob).",
+        default=0.60,
+        help="Keep probability for top bucket (default: 0.60). Rest kept with (1-prob).",
     )
     
     parser.add_argument('--train_seed', type=int, default=1)

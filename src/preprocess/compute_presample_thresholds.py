@@ -15,7 +15,7 @@ def recommend_sampling_params(
     top_n: int = 3,
     patch_height: int = 256,
     patch_width: int = 256,
-    stride_patch: int = 128,
+    stride_patch: int = 64,
     season_tag: str = 'summer',
 ):
     df = pd.read_csv(csv_path)
