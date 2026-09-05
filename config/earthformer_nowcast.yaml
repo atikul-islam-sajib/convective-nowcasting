@@ -4,8 +4,8 @@
 # Do NOT use the pretrained SEVIR config -- that is 384x384 with 1 channel.
 
 model:
-  input_shape:  [4, 256, 256, 3]   # [T, H, W, C_in]  4 timesteps x 3 channels
-  target_shape: [4, 256, 256, 1]   # [T, H, W, C_out] 2 horizons, radar only : we can define for sat_radar as well.
+  input_shape:  [4, 256, 256, 3]   # [T, H, W, C_in]  4 timesteps x 3 channels,   target_shape: [4, 256, 256, 1]   # [T, H, W, C_out] 2 horizons, radar only : we can define for sat_radar as well.
+  target_shape: [4, 256, 256, 1]   # [T, H, W, C_out] 2 horizons
 
   base_units:  64
   scale_alpha: 1.0
