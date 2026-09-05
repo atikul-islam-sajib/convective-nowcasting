@@ -112,6 +112,6 @@ recommend_sampling_params(
     top_n                 = 3,
     patch_height          = 256,
     patch_width           = 256,
-    stride_patch          = 128,
+    stride_patch          = 64,
     season_tag            = 'summer',
 )

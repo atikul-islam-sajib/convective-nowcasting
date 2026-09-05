@@ -339,7 +339,7 @@ def get_parser():
     parser.add_argument('--nan_threshold', type=float, default=0.3,
         help="Reject patches with NaN ratio >= this value")
     parser.add_argument('--summer_only', action='store_true',
-        help="Only process Jun/Jul/Aug")
+        help="Only process Jun/Jul/Aug/Sept")
     parser.add_argument('--workers', type=int, default=12)
 
     return parser
