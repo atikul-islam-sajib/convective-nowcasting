@@ -1,0 +1,42 @@
+site_name: Convective Nowcasting
+site_description: Deep learning architectures for convective precipitation nowcasting using radar and satellite observations
+repo_url: https://github.com/atikul-islam-sajib/convective-nowcasting
+theme:
+  name: material
+  palette:
+    primary: indigo
+  features:
+    - navigation.sections
+    - navigation.expand
+    - content.code.copy
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Data Pipeline:
+      - Overview: data/overview.md
+      - Preprocessing: data/preprocessing.md
+      - Configuration: data/config.md
+  - Models:
+      - Overview: models/overview.md
+      - ConvLSTM: models/convlstm.md
+      - SimVP: models/simvp.md
+      - SmaAt-UNet: models/smaat-unet.md
+      - EarthFormer: models/earthformer.md
+      - VPTR: models/vptr.md
+  - Training:
+      - Overview: training/overview.md
+      - Loss Function: training/loss.md
+  - Inference: inference.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.arithmatex:
+      generic: true
+  - tables
+
+extra_javascript:
+  - https://polyfill.io/v3/polyfill.min.js?features=es6
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
