@@ -37,7 +37,7 @@ patches are sampled with two parameters:
 | Radar | Log transform, clipped at 128 mm/h |
 | Satellite | Z-score normalization (per-channel mean/std) |
 
-### Radar log transform
+### Radar log transform [39]
 
 $$
 f(x) = \frac{\log_{10}(\max(x, z) + \epsilon)}{\log_{10}(C_{\max} + \epsilon)}
@@ -53,7 +53,7 @@ f^{-1}(y) = \operatorname{clamp}\!\left(10^{\,y \cdot \log_{10}(C_{\max}+\epsilo
 \qquad (3.2)
 $$
 
-### Satellite Z-score normalization
+### Satellite Z-score normalization [40]
 
 $$
 \hat{x} = \frac{x - \mu}{\sigma + \alpha} \qquad (3.3)
@@ -88,13 +88,13 @@ location in both. Naively resizing would misalign the two sources.
 **Downsampling** a higher-resolution grid to a coarser one averages
 neighbouring pixels, which blurs convective-cell boundaries and removes
 small-scale spatial structure. **Upsampling** a lower-resolution grid to a
-finer one cannot recover detail that was never recorded — it only
+finer one cannot recover detail that was never recorded [41] — it only
 interpolates new pixel values from surrounding measurements, giving the
 appearance of extra detail that is not actually present in the data.
 
 Instead, satellite pixel positions are converted to geographic coordinates,
 transformed into the radar coordinate system, and resampled onto the fixed
-radar grid via **bilinear interpolation**, falling back to nearest-neighbour
+radar grid via **bilinear interpolation** [42], falling back to nearest-neighbour
 where bilinear interpolation cannot be computed (e.g. near missing values):
 
 $$

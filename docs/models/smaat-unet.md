@@ -1,6 +1,7 @@
 # SmaAt-UNet
 
-SmaAt-UNet follows an encoder-decoder structure similar to U-Net. The input
+SmaAt-UNet [5] follows an encoder-decoder structure similar to U-Net [18].
+The input
 precipitation fields first pass through the encoder, where their spatial
 dimensions are reduced while higher-level features are extracted. The
 decoder then gradually increases the spatial resolution to reconstruct the

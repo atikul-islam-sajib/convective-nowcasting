@@ -31,6 +31,7 @@ nav:
       - Evaluation Metrics: training/metrics.md
   - Inference: inference.md
   - Results & Findings: results.md
+  - References: references.md
 
 markdown_extensions:
   - admonition

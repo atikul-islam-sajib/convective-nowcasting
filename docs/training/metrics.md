@@ -4,13 +4,13 @@ Five metrics are used to evaluate all models (and the pySTEPS baseline)
 on the held-out test set: MAE, MSE, CSI, ETS, and PSNR. Lower is better for
 MAE/MSE; higher is better for CSI/ETS/PSNR.
 
-## Mean Absolute Error (MAE)
+## Mean Absolute Error (MAE) [58]
 
 $$
 \text{MAE} = \frac{\sum_{i=1}^{N} |y_i - \hat{y}_i|}{N} \qquad (4.6)
 $$
 
-## Mean Squared Error (MSE)
+## Mean Squared Error (MSE) [60]
 
 $$
 \text{MSE} = \frac{\sum_{i=1}^{N} (y_i - \hat{y}_i)^2}{N} \qquad (4.7)
@@ -20,7 +20,7 @@ $y_i$, $\hat{y}_i$ are the observed/predicted precipitation intensity at
 pixel $i$; $N$ is the total number of pixels. MSE weights larger errors more
 heavily than MAE.
 
-## Critical Success Index (CSI)
+## Critical Success Index (CSI) [61]
 
 $$
 \text{CSI} = \frac{H}{H + M + FA} \qquad (4.8)
@@ -30,7 +30,7 @@ where $H$, $M$, $FA$ are hits, misses, and false alarms at a given
 precipitation threshold. CSI ignores correct negatives, making it suitable
 for datasets dominated by non-precipitating pixels.
 
-## Equitable Threat Score (ETS)
+## Equitable Threat Score (ETS) [62]
 
 $$
 \text{ETS} = \frac{H - H_c}{H + M + FA - H_c} \qquad (4.9)
@@ -45,7 +45,7 @@ $N = H+M+FA+CN$ is the total sample count ($CN$ = correct negatives). ETS
 corrects CSI for chance agreement, and was used as the **model-selection
 criterion** on the validation set.
 
-## Peak Signal-to-Noise Ratio (PSNR)
+## Peak Signal-to-Noise Ratio (PSNR) [63]
 
 $$
 \text{PSNR} = 10 \cdot \log_{10}\!\left(\frac{\text{MAX}^2}{\text{MSE}}\right)

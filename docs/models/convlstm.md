@@ -1,7 +1,7 @@
 # ConvLSTM
 
-ConvLSTM combines the convolution operation with the LSTM structure. The
-model receives a sequence of precipitation observations and processes the
+ConvLSTM [16] combines the convolution operation with the LSTM [17]
+structure. The model receives a sequence of precipitation observations and processes the
 frames one time step at a time. At each step, convolution is used to
 extract spatial features, while the hidden and cell states carry
 information from the previous time steps. The input, hidden state, and

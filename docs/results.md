@@ -36,8 +36,19 @@ the 15 and 30 minute lead times), then applied unchanged to the test set:
 | Period | 2015–2024 (3,653 days) | 2015–2024 (3,653 days) |
 | Cadence | 5 minutes | 5 minutes |
 | Images per day | 288 | 288 per channel |
-| Total images | ~1,052,064 | ~2,104,128 (both channels) |
 | Native resolution | 1100 × 900 | 175 × 320 (regridded to radar grid) |
+
+## Performance across models and lead times
+
+![ETS heatmap](assets/images/results_heatmap_ets.png)
+![CSI heatmap](assets/images/results_heatmap_csi.png)
+![MAE heatmap](assets/images/results_heatmap_mae.png)
+![MSE heatmap](assets/images/results_heatmap_mse.png)
+![PSNR heatmap](assets/images/results_heatmap_psnr.png)
+
+## pySTEPS extrapolation baseline
+
+![pySTEPS heatmap](assets/images/results_heatmap_pysteps.png)
 
 ## Headline results
 
@@ -51,9 +62,9 @@ the 15 and 30 minute lead times), then applied unchanged to the test set:
   baseline did *not* benefit from adding satellite input — its accuracy
   declined instead.
 - **Deep learning vs. extrapolation is a trade-off, not a clean win.**
-  pySTEPS radar-only achieved lower MAE/MSE and higher PSNR than every deep
+  pySTEPS [12] radar-only achieved lower MAE/MSE and higher PSNR than every deep
   learning model at every lead time, while the deep learning models achieved
-  modestly higher CSI/ETS — consistent with the "double penalty problem" in
+  modestly higher CSI/ETS — consistent with the "double penalty problem" [64] in
   nowcasting verification (smooth extrapolation forecasts minimize
   pixel-wise error but under-detect sharp, localized events).
 - **Intense convective precipitation remains the hardest case** for every
@@ -95,12 +106,12 @@ averaging, stacking) are suggested as future work.
 - Only one loss formulation (the hybrid weighted MAE) was evaluated; no
   statistical significance testing was performed on the reported metric
   differences.
-- Training was capped at 50 epochs with early stopping; generative,
-  diffusion-based, and transfer-learning approaches were out of scope.
+- Training was capped at 50 epochs with early stopping; generative [20],
+  diffusion-based [22], and transfer-learning [66] approaches were out of scope.
 
 ## Future work
 
-- Add further SEVIRI channels, lightning data, and NWP fields as inputs.
+- Add further SEVIRI channels, lightning data [65], and NWP fields as inputs.
 - Explore feature-level / intermediate fusion instead of input-level
   concatenation.
 - Improve representation of intense convective events via targeted sampling

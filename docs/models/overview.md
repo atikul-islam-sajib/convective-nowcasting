@@ -55,7 +55,7 @@ multimodal and radar-only input configurations.
 ## Ensemble Model
 
 In addition to the five models, an ensemble modeling technique has been
-incorporated by considering predictions of all five models. The ensemble
+incorporated by considering predictions of all five models [56]. The ensemble
 prediction for each forecast horizon is the arithmetic mean of the five
 model predictions:
 

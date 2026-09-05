@@ -1,6 +1,6 @@
 # VPTR
 
-VPTR combines a convolutional encoder with a Transformer decoder. The input
+VPTR [55] combines a convolutional encoder with a Transformer decoder. The input
 sequence is first passed through the convolutional encoder, which extracts
 spatial features from the radar and satellite observations. These features
 are then provided to the Transformer decoder, where the attention

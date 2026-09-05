@@ -5,7 +5,7 @@
 | Source | Product | Native resolution | Cadence |
 |---|---|---|---|
 | Radar | RADOLAN YW (5-minute rainfall accumulation) | 1100 × 900 grid | 5 min |
-| Satellite | SEVIRI (MSG), channels CH7 (8.7 µm) and CH9 (10.8 µm) | 175 × 320, regridded to radar grid | 5 min |
+| Satellite | SEVIRI (MSG), channels CH7 (8.7 µm) and CH9 (10.8 µm) [37] | 175 × 320, regridded to radar grid | 5 min |
 
 Channel 7 provides cloud-property information; Channel 9 provides cloud-top
 temperature, both relevant to characterizing convective cloud systems. Two
@@ -16,7 +16,6 @@ of SEVIRI's 12 available spectral channels are used.
 | | Radar | Satellite (CH7 + CH9) |
 |---|---|---|
 | Images per day | 288 | 288 per channel |
-| Total images | ~1,052,064 | ~2,104,128 |
 
 ## Regridding
 

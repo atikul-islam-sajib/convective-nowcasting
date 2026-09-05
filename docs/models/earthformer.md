@@ -1,6 +1,6 @@
 # Earthformer
 
-Earthformer uses a Transformer-based structure to process spatiotemporal
+Earthformer [6] uses a Transformer-based structure to process spatiotemporal
 data. The input sequence is divided into smaller 3D cuboids that contain
 information from both the spatial dimensions and the time dimension. The
 model applies self-attention to these cuboids so that information from

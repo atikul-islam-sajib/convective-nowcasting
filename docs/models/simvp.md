@@ -1,6 +1,6 @@
 # SimVP
 
-SimVP uses a convolutional encoder and decoder to predict future frames
+SimVP [54] uses a convolutional encoder and decoder to predict future frames
 from a sequence of observed frames. The encoder first converts the input
 frames into feature representations, which contain information about the
 observed precipitation patterns. These features are then processed by the
