@@ -28,6 +28,7 @@ nav:
       - Overview: training/overview.md
       - Loss Function: training/loss.md
   - Inference: inference.md
+  - Results & Findings: results.md
 
 markdown_extensions:
   - admonition
