@@ -41,13 +41,13 @@ At each reference time $t$, the input sequence consists of 4 consecutive
 frames, each covering a 5-minute observation period:
 
 $$
-\mathcal{X}_t = \left\{ x_t^{(1)}, x_t^{(2)}, x_t^{(3)}, x_t^{(4)} \right\}
+\mathcal{X}_t = \left\\{ x_t^{(1)}, x_t^{(2)}, x_t^{(3)}, x_t^{(4)} \right\\}
 $$
 
 The model predicts the radar precipitation field at 4 future lead times:
 
 $$
-\mathcal{Y} = \left\{ y_{t+15},\; y_{t+30},\; y_{t+45},\; y_{t+60} \right\}
+\mathcal{Y} = \left\\{ y_{t+15},\; y_{t+30},\; y_{t+45},\; y_{t+60} \right\\}
 $$
 
 | Configuration | Input shape | Output shape |
