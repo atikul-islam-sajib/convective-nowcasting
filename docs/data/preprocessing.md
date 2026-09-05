@@ -79,6 +79,43 @@ storms often exceed 128 × 128 pixels at 1 km resolution, and a larger patch
 captures both the precipitation core and surrounding context needed for
 accurate nowcasts.
 
+## Regridding satellite onto the radar grid
+
+Radar (1100 × 900) and satellite (175 × 320) observations live on different
+native grids, so pixel `(i, j)` does not represent the same geographic
+location in both. Naively resizing would misalign the two sources.
+
+**Downsampling** a higher-resolution grid to a coarser one averages
+neighbouring pixels, which blurs convective-cell boundaries and removes
+small-scale spatial structure. **Upsampling** a lower-resolution grid to a
+finer one cannot recover detail that was never recorded — it only
+interpolates new pixel values from surrounding measurements, giving the
+appearance of extra detail that is not actually present in the data.
+
+Instead, satellite pixel positions are converted to geographic coordinates,
+transformed into the radar coordinate system, and resampled onto the fixed
+radar grid via **bilinear interpolation**, falling back to nearest-neighbour
+where bilinear interpolation cannot be computed (e.g. near missing values):
+
+$$
+\hat{v}(x,y) = (1-t_x)(1-t_y)\,v_{00} + t_x(1-t_y)\,v_{10} + (1-t_x)t_y\,v_{01} + t_x t_y\,v_{11}
+$$
+
+where $v_{00}, v_{10}, v_{01}, v_{11}$ are the satellite values at the four
+grid points surrounding the target radar-grid location, and $t_x, t_y \in
+[0,1]$ are the fractional distances from $(x,y)$ to the lower-left
+surrounding point along each axis. This produces satellite images with the
+same 1100 × 900 dimensions and grid as the radar data, enabling direct
+pixel-by-pixel channel concatenation.
+
+![Radar-satellite regridding overlay](../assets/images/regridding_overlay.png)
+
+*Regridded radar and CH7/CH9 satellite observations for a convective event
+(30 June 2024). Overlay columns show satellite (red) and radar (blue)
+superimposed on the common grid — the close spatial correspondence between
+precipitation regions and adjacent cold cloud structures confirms correct
+alignment.*
+
 ## Two-bucket quantile sampling
 
 A quantile threshold $\tau$ is computed from the distribution of per-patch

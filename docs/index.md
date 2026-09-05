@@ -35,6 +35,15 @@ models, although this benefit did not extend to the extrapolation-based
 baseline. Severe convective precipitation remained the most difficult to
 predict because such events were underrepresented in the training data.
 
+## Pipeline
+
+![Methodology pipeline](assets/images/pipeline.png)
+
+*Overview of the nowcasting pipeline. The multimodal configuration fuses
+radar and satellite observations into a single input tensor; the
+radar-only configuration follows the same pipeline with the satellite
+channels removed.*
+
 ## Research hypotheses
 
 | | Hypothesis |

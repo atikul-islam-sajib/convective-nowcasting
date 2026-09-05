@@ -1,28 +1,29 @@
 # VPTR
 
-**Source:** `src/models/vptr/`
+VPTR combines a convolutional encoder with a Transformer decoder. The input
+sequence is first passed through the convolutional encoder, which extracts
+spatial features from the radar and satellite observations. These features
+are then provided to the Transformer decoder, where the attention
+mechanism processes relationships within the encoded sequence. The decoder
+uses this information to generate the future frames. In this way, the
+convolutional encoder handles the extraction of local spatial features,
+while the Transformer is used to model relationships across the sequence.
+This combination is suitable for convective precipitation nowcasting
+because the prediction requires both the detailed spatial structure of
+convective cells and information about how these structures change over
+time.
 
-VPTR combines a convolutional (ResNet) encoder/decoder with a
-non-autoregressive Transformer core. The encoder extracts spatial features
-from each input frame independently; the Transformer then models
-relationships across the encoded sequence before the decoder reconstructs
-the predicted frames.
+## Simplified flow
 
-## Structure
+```mermaid
+flowchart LR
+    A["Input sequence"] --> B["Convolutional\nencoder (ResNet)"]
+    B --> C["Transformer\ncore (attention)"]
+    C --> D["Convolutional\ndecoder (ResNet)"]
+    D --> E["Predicted frames"]
+```
 
-- `VPTREnc` / `VPTRDec`: ResNet-based autoencoder (3 downsampling stages).
-- `VPTRFormerNAR`: non-autoregressive Transformer core using local window
-  attention with relative position encoding.
-- A `VPTRDisc` (PatchGAN discriminator) is available for adversarial
-  training variants, though the main comparison uses the non-adversarial
-  configuration.
-
-!!! note
-    As with EarthFormer, this implementation uses a reduced Transformer
-    configuration (smaller `d_model`, fewer heads and layers) relative to
-    the original paper's larger-scale video prediction benchmarks.
-
-## Key files
+## Key files (`src/models/vptr/`)
 
 | File | Role |
 |---|---|

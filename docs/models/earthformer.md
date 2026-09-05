@@ -1,25 +1,28 @@
-# EarthFormer
+# Earthformer
 
-**Source:** `src/models/earthformer/`
+Earthformer uses a Transformer-based structure to process spatiotemporal
+data. The input sequence is divided into smaller 3D cuboids that contain
+information from both the spatial dimensions and the time dimension. The
+model applies self-attention to these cuboids so that information from
+different locations and time steps can be related to each other. The
+resulting features are passed through the Transformer layers to build a
+representation of the spatiotemporal patterns in the input sequence. The
+model then uses this representation to predict the future frames. For
+precipitation nowcasting, this approach is useful because the development
+of a convective cell at one location can be related to changes occurring in
+other locations and at earlier time steps.
 
-EarthFormer processes spatiotemporal data using a Cuboid Transformer: the
-input sequence is divided into local 3D cuboids spanning both space and time,
-and self-/cross-attention is applied within and across these cuboids so that
-information at different locations and time steps can be related.
+## Simplified flow
 
-## Structure
+```mermaid
+flowchart LR
+    A["Input sequence\n(space x time)"] --> B["Divide into\n3D cuboids"]
+    B --> C["Self-attention\nwithin/across cuboids"]
+    C --> D["Cuboid Transformer\nencoder-decoder"]
+    D --> E["Predicted frames"]
+```
 
-- Initial convolutional downsampling stage.
-- Multi-stage cuboid encoder and decoder using local windowed attention.
-- Non-autoregressive decoder: the initial query is derived from the
-  encoder's memory via interpolation, rather than generated frame by frame.
-
-!!! note
-    This implementation uses a reduced configuration (smaller channel width
-    and fewer attention layers) relative to the original paper's SEVIR
-    benchmark setup, in order to keep training computationally tractable.
-
-## Key files
+## Key files (`src/models/earthformer/`)
 
 | File | Role |
 |---|---|

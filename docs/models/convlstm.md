@@ -1,22 +1,28 @@
 # ConvLSTM
 
-**Source:** `src/models/convlstm/`
+ConvLSTM combines the convolution operation with the LSTM structure. The
+model receives a sequence of precipitation observations and processes the
+frames one time step at a time. At each step, convolution is used to
+extract spatial features, while the hidden and cell states carry
+information from the previous time steps. The input, hidden state, and
+cell state are updated through the LSTM gates, allowing the model to decide
+which information should be retained or updated. The updated hidden state
+is then used when processing the next frame. For precipitation nowcasting,
+this allows the model to use the recent movement and development of
+precipitation patterns when predicting future frames.
 
-ConvLSTM combines convolution with the LSTM recurrent structure. The model
-processes the input sequence one frame at a time; convolution extracts
-spatial features at each step, while the hidden and cell states carry
-information forward through time. This allows the model to track the recent
-movement and evolution of precipitation systems across the input sequence.
+## Simplified flow
 
-## Structure
+```mermaid
+flowchart LR
+    A["Input frame (t)"] --> B["Conv layer\nspatial features"]
+    B --> C["ConvLSTM cell\nhidden + cell state"]
+    C -- "hidden state carried forward" --> C
+    C --> E["Decoder\nupsample"]
+    E --> F["Predicted frame"]
+```
 
-- 3 encoder stages, each pairing a convolutional downsampling layer with a
-  ConvLSTM cell.
-- 3 mirrored decoder stages that upsample back to the original resolution.
-- Final output layer has **no activation function**, consistent with a
-  regression task.
-
-## Key files
+## Key files (`src/models/convlstm/`)
 
 | File | Role |
 |---|---|

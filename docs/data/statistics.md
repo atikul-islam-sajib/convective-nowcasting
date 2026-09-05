@@ -23,6 +23,8 @@ Scan Service interruptions.
 | 2023 | 105,120 | 105,120 | 0.0% | 90,865 | 13.6% |
 | 2024 | 105,408 | 105,384 | 0.0% | 89,542 | 15.1% |
 
+![Missing data heatmap](../assets/images/stat_availability_heatmap.png)
+
 ## Radar NaN analysis (Table 3.4)
 
 NaN rates are fairly stable across years, ranging from **39.16%** (2015) to
@@ -63,6 +65,8 @@ right-skewed distribution that motivates the intensity-weighted loss
 | 2024 | 93.0 | 6.0 | 1.0 | 0.1 |
 | **Total** | **93.6** | **5.5** | **0.8** | **0.1** |
 
+![Rainfall intensity distribution heatmap](../assets/images/stat_intensity_heatmap.png)
+
 Categories: No Rain (<0.1 mm/h), Light (0.1–2.5), Moderate (2.5–10), Heavy (≥10).
 
 ## Precipitation threshold analysis (Table 3.6)
@@ -84,6 +88,8 @@ case to predict (see [Results & Findings](../results.md)).
 | 2023 | 7.777 | 2.602 | 0.369 | 0.067 |
 | 2024 | 7.015 | 2.480 | 0.376 | 0.071 |
 
+![Precipitation threshold exceedance heatmap](../assets/images/stat_threshold_heatmap.png)
+
 ## Seasonal distribution (Table 3.7)
 
 Summer generally contributes substantially to annual rainfall — the
@@ -103,6 +109,10 @@ to the summer months (JJAS).
 | 2022 | 0.077 | 0.053 | 0.079 | 0.090 | 654.3 |
 | 2023 | 0.069 | 0.086 | 0.119 | 0.109 | 839.8 |
 | 2024 | 0.108 | 0.100 | 0.108 | 0.097 | 907.0 |
+
+![Seasonal mean intensity heatmap](../assets/images/stat_seasonal_heatmap.png)
+
+![Annual total accumulation](../assets/images/stat_annual_accum_bar.png)
 
 ## Summary
 

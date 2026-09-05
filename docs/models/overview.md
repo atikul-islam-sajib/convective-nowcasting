@@ -34,9 +34,10 @@ $$
 
 ## Architectures
 
-Five architectures are evaluated, representing recurrent, convolutional, and
-Transformer-based design principles for spatiotemporal forecasting. Each is
-trained separately on the multimodal and radar-only input configurations.
+The architectures evaluated in this study include recurrent, convolutional,
+and Transformer-based models, along with different strategies for
+representing temporal information. Each is trained separately on the
+multimodal and radar-only input configurations.
 
 | Model | Core mechanism | Multimodal input | Radar-only input | Output |
 |---|---|---|---|---|
@@ -51,17 +52,19 @@ trained separately on the multimodal and radar-only input configurations.
     4 channels (radar-only) = 4 input frames × 1 channel.
     4 output channels = 4 forecast horizons (t+15, t+30, t+45, t+60).
 
-## Ensemble
+## Ensemble Model
 
-An **ensemble** prediction is formed as the unweighted average of all five
-models' outputs, computed independently at each lead time:
+In addition to the five models, an ensemble modeling technique has been
+incorporated by considering predictions of all five models. The ensemble
+prediction for each forecast horizon is the arithmetic mean of the five
+model predictions:
 
 $$
 \hat{y}_{\text{ensemble}} = \frac{1}{5}\sum_{i=1}^{5} \hat{y}_i \qquad (4.2)
 $$
 
-where $\hat{y}_i$ is the prediction of model $i$. Averaging may reduce the
-influence of errors specific to individual architectures, depending on the
-diversity between their predictions — see [Results & Findings](../results.md)
-for how well this held up empirically (H3).
-
+where $\hat{y}_i$ is the prediction of model $i$. Taking the mean of all
+five models may reduce the influence of errors associated with individual
+architectures, depending on the degree of diversity between their
+predictions — see [Results & Findings](../results.md) for how well this
+held up empirically (H3).

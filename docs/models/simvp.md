@@ -1,27 +1,36 @@
 # SimVP
 
-**Source:** `src/models/simvp/`
+SimVP uses a convolutional encoder and decoder to predict future frames
+from a sequence of observed frames. The encoder first converts the input
+frames into feature representations, which contain information about the
+observed precipitation patterns. These features are then processed by the
+prediction component to learn the changes between the observed and future
+states. Finally, the decoder converts the learned features back into the
+spatial form of the predicted precipitation fields. SimVP does not use
+recurrent connections or attention mechanisms, so the model provides a
+simpler way of learning the relationship between past and future
+precipitation fields. This makes it useful in this study as a
+convolution-based model for comparison with the recurrent and
+Transformer-based architectures.
 
-SimVP uses a purely convolutional encoder-translator-decoder design, with
-**no recurrent connections and no attention mechanism**. This makes it a
-useful comparison point against the recurrent (ConvLSTM) and Transformer-based
-(EarthFormer, VPTR) architectures.
+## Simplified flow
 
-## Structure
+```mermaid
+flowchart LR
+    A["Input frames"] --> B["Convolutional\nencoder"]
+    B --> C["Prediction\ncomponent (translator)"]
+    C --> D["Convolutional\ndecoder"]
+    D --> E["Predicted frames"]
+```
 
-- **Encoder**: spatial downsampling via stacked `ConvSC` blocks.
-- **Translator (`Mid_Xnet`)**: Inception-style blocks using multiple parallel
-  kernel sizes (3, 5, 7, 11) to model temporal evolution in the latent space.
-- **Decoder**: mirrors the encoder, upsampling back to the input resolution.
-
-!!! note
-    The "Inception" module here is a small, custom, from-scratch block
-    inspired by the multi-kernel idea in GoogLeNet's Inception module — it is
-    **not** a pretrained ImageNet Inception network.
-
-## Key files
+## Key files (`src/models/simvp/`)
 
 | File | Role |
 |---|---|
 | `model.py` | `Encoder`, `Decoder`, `Mid_Xnet`, and the top-level `SimVP` module. |
 | `modules.py` | `ConvSC` and `Inception` building blocks. |
+
+!!! note
+    The "Inception" module is a small, custom, from-scratch block using
+    multiple parallel kernel sizes — not a pretrained ImageNet Inception
+    network.
