@@ -5,6 +5,12 @@
 *M.Sc. Data Science thesis — Atikul Islam Sajib, Berliner Hochschule für
 Technik Berlin*
 
+| Role | Name |
+|---|---|
+| Supervisor | Prof. Dr. Stefan Edlich (Berliner Hochschule für Technik) |
+| Day-to-day supervisor | Dr. Noelia Otero Felipe (Fraunhofer HHI) |
+| Reviewer | Prof. Dr. Sören Werth (Berliner Hochschule für Technik) |
+
 ## Abstract
 
 Convective precipitation is highly localized and evolves continuously over

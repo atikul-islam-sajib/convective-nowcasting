@@ -16,6 +16,7 @@ nav:
   - Data Pipeline:
       - Overview: data/overview.md
       - Preprocessing: data/preprocessing.md
+      - Statistics: data/statistics.md
       - Configuration: data/config.md
   - Models:
       - Overview: models/overview.md
@@ -27,6 +28,7 @@ nav:
   - Training:
       - Overview: training/overview.md
       - Loss Function: training/loss.md
+      - Evaluation Metrics: training/metrics.md
   - Inference: inference.md
   - Results & Findings: results.md
 

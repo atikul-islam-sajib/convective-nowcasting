@@ -1,5 +1,34 @@
 # Results & Findings
 
+## Two input configurations
+
+$$
+\mathcal{X}_{\text{multi}} = [\,X_{\text{radar}},\, X_{\text{CH7}},\, X_{\text{CH9}}\,] \in \mathbb{R}^{B\times T\times 3\times H\times W}
+\qquad (5.1)
+$$
+
+$$
+\mathcal{X}_{\text{radar-only}} = [\,X_{\text{radar}}\,] \in \mathbb{R}^{B\times T\times 1\times H\times W}
+\qquad (5.2)
+$$
+
+where $B$ is batch size and $T=4$ input timesteps. The two configurations
+differ only in channel composition, enabling a direct, controlled comparison.
+
+## pySTEPS baseline configuration (Table 5.3)
+
+Extrapolation settings were selected via grid search on a held-out
+validation subset (scored by pooled CSI/ETS at 5 and 15 mm/h, averaged over
+the 15 and 30 minute lead times), then applied unchanged to the test set:
+
+| Parameter | Search space | Selected |
+|---|---|---|
+| Motion estimation method | LK, VET | LK |
+| Nowcast method | Extrapolation, S-PROG | Extrapolation |
+| Extrapolation interpolation | Nearest, Bilinear | Bilinear |
+| History frames | 3, 5 | 5 |
+| Persistence blending | On, Off | Off |
+
 ## Dataset scale
 
 | | Radar (RADOLAN) | Satellite (SEVIRI CH7 + CH9) |
