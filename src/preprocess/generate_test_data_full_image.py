@@ -34,6 +34,8 @@ def get_target_times(current_time, horizons_minutes):
     return [current_time + timedelta(minutes=h) for h in horizons_minutes]
 
 
+
+
 def all_files_exist(paths):
     return all(os.path.exists(p) for p in paths)
 
@@ -48,7 +50,6 @@ def is_valid_sample(radar_base, sat_base, history_times, target_times, channels)
         return False
     return True
 
-
 CLIP_MAX    = 128.0
 SOFTLOG_EPS = 1.0
 
@@ -58,7 +59,6 @@ def compute_patch_p99(arr):
     work = np.clip(work, 0.0, CLIP_MAX)
     work[np.isnan(work)] = 0.0
     return float(np.percentile(work, 99))
-
 
 def _process_timepoint_fullimage(args):
     (
@@ -86,7 +86,7 @@ def _process_timepoint_fullimage(args):
         all_radar_frames = np.stack([
             np.load(radar_path(radar_base, t)).astype(np.float32)
             for t in history_times + target_times
-        ], axis=0) 
+        ], axis=0)  # [T_in + T_out, H, W]
     except Exception:
         return []
 
@@ -103,6 +103,7 @@ def _process_timepoint_fullimage(args):
         row[f'radar_path_{h}'] = radar_path(radar_base, t)
 
     return [row]
+
 
 def generate_fullimage_metadata(
     radar_base,
@@ -128,19 +129,20 @@ def generate_fullimage_metadata(
     )
 
     print("=" * 70)
-    print(f"FULL IMAGE METADATA GENERATION — {split_name.upper()}")
+    print(f"FULL IMAGE METADATA GENERATION -- {split_name.upper()}")
     print("=" * 70)
     print(f"Radar base:      {radar_base}")
     print(f"Satellite base:  {sat_base}")
-    print(f"Date range:      {start_date} → {end_date}")
-    print(f"Input frames:    {num_in_frames} × {stride_minutes}min")
+    print(f"Date range:      {start_date} -> {end_date}")
+    print(f"Input frames:    {num_in_frames} x {stride_minutes}min")
     print(f"Horizons:        {horizons_minutes} min")
     print(f"Channels:        {channels}")
-    print(f"Summer only:     {summer_only}")
+    print(f"Summer only:     {summer_only}  (JJAS: Jun-Sep)")
     print(f"Workers:         {max_workers}")
     print(f"Output:          {out_csv}")
     print("=" * 70)
 
+    # Build timepoints
     start_dt   = datetime.strptime(start_date, '%Y-%m-%d %H:%M')
     end_dt     = datetime.strptime(end_date,   '%Y-%m-%d %H:%M')
     timepoints = []
@@ -149,7 +151,7 @@ def generate_fullimage_metadata(
         timepoints.append(t)
         t += timedelta(minutes=t_jump_minutes)
 
-    print(f"Timepoints:      {len(timepoints):,}")
+    print(f"Timepoints (raw scan, pre-summer-filter): {len(timepoints):,}")
     print("=" * 70)
 
     packed_args = [
@@ -211,17 +213,17 @@ def get_parser():
     parser.add_argument('--splits', nargs='+', default=['test'])
 
     parser.add_argument('--train_start', type=str, default='2015-01-01 00:00')
-    parser.add_argument('--train_end',   type=str, default='2021-12-31 23:55')
-    parser.add_argument('--val_start',   type=str, default='2022-01-01 00:00')
-    parser.add_argument('--val_end',     type=str, default='2022-12-31 23:55')
-    parser.add_argument('--test_start',  type=str, default='2023-01-01 00:00')
-    parser.add_argument('--test_end',    type=str, default='2023-12-31 23:55')
+    parser.add_argument('--train_end',   type=str, default='2022-12-31 23:55')
+    parser.add_argument('--val_start',   type=str, default='2023-01-01 00:00')
+    parser.add_argument('--val_end',     type=str, default='2023-12-31 23:55')
+    parser.add_argument('--test_start',  type=str, default='2024-01-01 00:00')
+    parser.add_argument('--test_end',    type=str, default='2024-12-31 23:55')
 
     parser.add_argument('--channels',       nargs='+', default=['CH7', 'CH9'])
-    parser.add_argument('--num_in_frames',  type=int,  default=9)
+    parser.add_argument('--num_in_frames',  type=int,  default=4)
     parser.add_argument('--stride_minutes', type=int,  default=5)
-    parser.add_argument('--horizons',       nargs='+', type=int, default=[15, 30])
-    parser.add_argument('--t_jump',         type=int,  default=15)
+    parser.add_argument('--horizons',       nargs='+', type=int, default=[15, 30, 45, 60])
+    parser.add_argument('--t_jump',         type=int,  default=5)
     parser.add_argument('--summer_only',    action='store_true')
     parser.add_argument('--workers',        type=int,  default=12)
 
