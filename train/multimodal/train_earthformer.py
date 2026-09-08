@@ -54,8 +54,8 @@ BG_COLOR   = "#888888"
 
 class MultiHorizonTrainingConfig:
 
-    metadata_train = 'metadata_patch/train_patch_256x256_s128_summer_sampled.csv'
-    metadata_val   = 'metadata_patch/val_patch_256x256_s128_summer_sampled.csv'
+    metadata_train = 'metadata_patch/train_patch_256x256_s64_summer_sampled.csv'
+    metadata_val   = 'metadata_patch/val_patch_256x256_s64_summer_sampled.csv'
     config_yml     = 'config/config.yml'
 
     earthformer_config_yml = 'config/earthformer_nowcast.yaml'

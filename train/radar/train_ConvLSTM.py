@@ -75,8 +75,8 @@ def build_encoder_params(in_channels: int):
 
 class MultiHorizonTrainingConfig:
 
-    metadata_train = 'metadata_patch/train_patch_256x256_s128_summer_sampled.csv'
-    metadata_val   = 'metadata_patch/val_patch_256x256_s128_summer_sampled.csv'
+    metadata_train = 'metadata_patch/train_patch_256x256_s64_summer_sampled.csv'
+    metadata_val   = 'metadata_patch/val_patch_256x256_s64_summer_sampled.csv'
     config_yml     = 'config/config.yml'
 
     operational_threshold    = 15.0

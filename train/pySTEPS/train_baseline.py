@@ -38,8 +38,8 @@ class Config:
     channel_stats_json = 'metadata/channel_stats.json'
     detailed_metrics_csv = os.path.join(out_dir, 'lk_extrapolation_radar_multimodal_metrics.csv')
     mean_metrics_csv = os.path.join(out_dir, 'lk_extrapolation_radar_multimodal_mean_metrics.csv')
-    num_in_frames = 4 # That is initialised but not used:: It is misleading
-    lk_num_frames = 5 # Internally it is calculated 5-1 = 4 * 5 min = 20 mins
+    num_in_frames = 4 
+    lk_num_frames = 4 
 
     stride_minutes = 5
     horizons = [15, 30, 45, 60]
