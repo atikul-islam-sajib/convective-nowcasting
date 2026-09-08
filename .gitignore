@@ -36,9 +36,9 @@ CHECKPOINTS_*/
 *.ckpt
 
 # Generated data / metadata (large, regenerable)
-metadata_patch/
-metadata/*.csv
+#metadata_patch/
+#metadata/*.csv
 
 # Output directories from inference/visualization scripts
 INFERENCE_*/
-*_quicktest/
+*_quicktest/metadata_patch/train_patch_256x256_s128_summer_sampled.csv
