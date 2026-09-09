@@ -1,3 +1,4 @@
 metadata_patch/train_patch_256x256_s128_summer_sampled.csv filter=lfs diff=lfs merge=lfs -text
 metadata/metadata_patch/train_patch_256x256_s128_summer_sampled.csv filter=lfs diff=lfs merge=lfs -text
+metadata/metadata_patch/*.csv filter=lfs diff=lfs merge=lfs -text
 metadata/*.jsonl.gz filter=lfs diff=lfs merge=lfs -text
