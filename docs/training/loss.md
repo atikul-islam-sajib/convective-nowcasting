@@ -36,7 +36,7 @@ data's precipitation distribution:
 | 2 | ≥ 7.0 | 7.0 |
 | 3 | ≥ 15.0 | 15.0 |
 | 4 | ≥ 25.0 | 25.0 |
-| 5 | ≥ 35.0 | 35.0 |
+| 5 | ≥ 40.0 | 40.0 |
 
 ## 2. Gradient sharpness penalty
 
