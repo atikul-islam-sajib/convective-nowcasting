@@ -1099,11 +1099,11 @@ ensemble prediction.</p>
 </tr>
 <tr>
 <td>LR schedule</td>
-<td>One-cycle (max LR 3e-4)</td>
+<td>Cosine annealing (<span class="arithmatex">\(\eta_{min}=5\times10^{-6}\)</span>, <span class="arithmatex">\(T_{max}=50\)</span>)</td>
 </tr>
 <tr>
-<td>Batch size</td>
-<td>16</td>
+<td>Batch size (accumulation steps)</td>
+<td>16 (2)</td>
 </tr>
 <tr>
 <td>Max epochs</td>
