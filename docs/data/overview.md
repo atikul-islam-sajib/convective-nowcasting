@@ -59,19 +59,33 @@ minutes. **Spatial size**: resized to 256 × 256 for training.
 
 ## Splits
 
-### Tables 3.9 / 3.10 — Temporal dataset split and sample counts
+### Table 3.9 — Temporal dataset split: training and validation sets
 
-| Split | Period | Duration | Samples before sampling | Samples after sampling |
+| Split | Period | Duration | Before | After |
 |---|---|---|---|---|
 | Training | 2015–2022 | 8 years | 27,197,532 | 12,851,153 |
 | Validation | 2023 | 1 year | 3,377,596 | 1,586,763 |
-| Test | 2024 | 1 year | — | 32,021 |
 
-Train/validation counts are patch-level (256×256) samples for the JJAS
-season, before and after the two-bucket quantile sampling procedure. The
-test set was **not** subsampled — the reported count is the complete set
-of valid JJAS timepoints, evaluated at the full-domain level via
-sliding-window inference rather than at the patch level.
+The sample counts correspond to the JJAS (June–September) period used for
+dataset construction, at the patch level (256×256), consistent with the
+patch-based model input. The "Before" column shows the total number of
+valid patch samples generated before sampling, while the "After" column
+shows the number of samples retained after the two-bucket quantile
+sampling procedure.
+
+### Table 3.10 — Temporal dataset split: test set
+
+| Split | Period | Duration | Samples |
+|---|---|---|---|
+| Test | 2024 | 1 year | 32,021 |
+
+The 2024 test set was used for the final performance evaluation and was
+not subjected to the two-bucket quantile sampling procedure. The reported
+count represents the complete set of valid JJAS timepoints. Unlike the
+training and validation sets, the test count is reported at the
+full-domain level for each timepoint, consistent with the full-domain
+sliding-window inference procedure used for evaluation, rather than at
+the patch level.
 
 ## Seasonal subsetting
 
