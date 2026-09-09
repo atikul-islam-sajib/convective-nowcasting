@@ -471,10 +471,21 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#tables-39-310-temporal-dataset-split-and-sample-counts" class="md-nav__link">
+  <a href="#table-39-temporal-dataset-split-training-and-validation-sets" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Tables 3.9 / 3.10 — Temporal dataset split and sample counts
+        Table 3.9 — Temporal dataset split: training and validation sets
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#table-310-temporal-dataset-split-test-set" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Table 3.10 — Temporal dataset split: test set
       
     </span>
   </a>
@@ -1152,10 +1163,21 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#tables-39-310-temporal-dataset-split-and-sample-counts" class="md-nav__link">
+  <a href="#table-39-temporal-dataset-split-training-and-validation-sets" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Tables 3.9 / 3.10 — Temporal dataset split and sample counts
+        Table 3.9 — Temporal dataset split: training and validation sets
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#table-310-temporal-dataset-split-test-set" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Table 3.10 — Temporal dataset split: test set
       
     </span>
   </a>
@@ -1332,15 +1354,15 @@ minutes. <strong>Spatial size</strong>: resized to 256 × 256 for training.</p>
 </tbody>
 </table>
 <h2 id="splits">Splits</h2>
-<h3 id="tables-39-310-temporal-dataset-split-and-sample-counts">Tables 3.9 / 3.10 — Temporal dataset split and sample counts</h3>
+<h3 id="table-39-temporal-dataset-split-training-and-validation-sets">Table 3.9 — Temporal dataset split: training and validation sets</h3>
 <table>
 <thead>
 <tr>
 <th>Split</th>
 <th>Period</th>
 <th>Duration</th>
-<th>Samples before sampling</th>
-<th>Samples after sampling</th>
+<th>Before</th>
+<th>After</th>
 </tr>
 </thead>
 <tbody>
@@ -1358,20 +1380,40 @@ minutes. <strong>Spatial size</strong>: resized to 256 × 256 for training.</p>
 <td>3,377,596</td>
 <td>1,586,763</td>
 </tr>
+</tbody>
+</table>
+<p>The sample counts correspond to the JJAS (June–September) period used for
+dataset construction, at the patch level (256×256), consistent with the
+patch-based model input. The "Before" column shows the total number of
+valid patch samples generated before sampling, while the "After" column
+shows the number of samples retained after the two-bucket quantile
+sampling procedure.</p>
+<h3 id="table-310-temporal-dataset-split-test-set">Table 3.10 — Temporal dataset split: test set</h3>
+<table>
+<thead>
+<tr>
+<th>Split</th>
+<th>Period</th>
+<th>Duration</th>
+<th>Samples</th>
+</tr>
+</thead>
+<tbody>
 <tr>
 <td>Test</td>
 <td>2024</td>
 <td>1 year</td>
-<td>—</td>
 <td>32,021</td>
 </tr>
 </tbody>
 </table>
-<p>Train/validation counts are patch-level (256×256) samples for the JJAS
-season, before and after the two-bucket quantile sampling procedure. The
-test set was <strong>not</strong> subsampled — the reported count is the complete set
-of valid JJAS timepoints, evaluated at the full-domain level via
-sliding-window inference rather than at the patch level.</p>
+<p>The 2024 test set was used for the final performance evaluation and was
+not subjected to the two-bucket quantile sampling procedure. The reported
+count represents the complete set of valid JJAS timepoints. Unlike the
+training and validation sets, the test count is reported at the
+full-domain level for each timepoint, consistent with the full-domain
+sliding-window inference procedure used for evaluation, rather than at
+the patch level.</p>
 <h2 id="seasonal-subsetting">Seasonal subsetting</h2>
 <p>Where a "summer-only" subset is used, it is defined as <strong>June–September
 (JJAS)</strong>, i.e. months <code>{6, 7, 8, 9}</code>, applied consistently across all
