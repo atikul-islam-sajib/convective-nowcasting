@@ -12,7 +12,6 @@ import matplotlib.patches as mpatches
 from scipy.ndimage import distance_transform_edt
 from skimage.metrics import structural_similarity
 from pysteps import motion, nowcasts
-from thresholds import VIZ_OPERATIONAL_MMH, VIZ_EXTREME_MMH
 import colors as PALETTE
 
 CLIP_MAX_MMH = 128.0
@@ -70,8 +69,8 @@ class Config:
     psnr_data_range = CLIP_MAX_MMH
     save_images = False
     save_images_only_datetimes = None
-    operational_thr = VIZ_OPERATIONAL_MMH
-    extreme_thr = VIZ_EXTREME_MMH
+    operational_thr = 15
+    extreme_thr = 40
 
 
 def radar_path(base, dt):
