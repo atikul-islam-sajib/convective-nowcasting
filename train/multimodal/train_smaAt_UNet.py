@@ -58,7 +58,7 @@ class MultiHorizonTrainingConfig:
     operational_threshold    = 15.0
     storm_threshold_json     = 'metadata/storm_threshold.json'
     use_extreme_from_data    = True
-    manual_extreme_threshold = 35.0
+    manual_extreme_threshold = 40.0
 
     checkpoint_dir = 'CHECKPOINTS_SMAATUNET_PATCH_1KM_SUMMER_2H_2015_to_2024_t15_to_t60_PRE_FINAL'
     train_viz_dir  = 'TRAINVIS_SMAATUNET_PATCH_1KM_SUMMER_2H_2015_to_2024_t15_to_t60_PRE_FINAL'
@@ -115,7 +115,7 @@ class MultiHorizonTrainingConfig:
     weight_threshold_2 = 7.0;  weight_value_2 = 7.0
     weight_threshold_3 = 15.0; weight_value_3 = 15.0
     weight_threshold_4 = 25.0; weight_value_4 = 25.0
-    weight_threshold_5 = 35.0; weight_value_5 = 35.0
+    weight_threshold_5 = 40.0; weight_value_5 = 40.0
 
     use_gradient_loss    = True
     gradient_loss_weight = 0.2

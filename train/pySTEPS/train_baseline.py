@@ -25,7 +25,7 @@ BG_COLOR = PALETTE.BG_COLOR
 
 class Config:
     categorical_thresholds = [5.0, 15.0]
-    subset_size = 10000
+    subset_size = None
     subset_manifest_csv = os.path.join('MEAN_PYSTEPS', 'final_test_manifest.csv')
     use_existing_subset_manifest = True 
 
