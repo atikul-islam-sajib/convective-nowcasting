@@ -711,7 +711,7 @@ class HybridWeightedMAE(nn.Module):
                  weight_threshold_2=7.0,  weight_value_2=7.0,
                  weight_threshold_3=15.0, weight_value_3=15.0,
                  weight_threshold_4=25.0, weight_value_4=25.0,
-                 weight_threshold_5=35.0, weight_value_5=35.0):
+                 weight_threshold_5=40.0, weight_value_5=40.0):
         super().__init__()
         self.weight_threshold_1 = weight_threshold_1; self.weight_value_1 = weight_value_1
         self.weight_threshold_2 = weight_threshold_2; self.weight_value_2 = weight_value_2
@@ -747,7 +747,7 @@ class HybridWeightedMSE(nn.Module):
                  weight_threshold_2=7.0,  weight_value_2=7.0,
                  weight_threshold_3=15.0, weight_value_3=15.0,
                  weight_threshold_4=25.0, weight_value_4=25.0,
-                 weight_threshold_5=35.0, weight_value_5=35.0):
+                 weight_threshold_5=40.0, weight_value_5=40.0):
         super().__init__()
         self.weight_threshold_1 = weight_threshold_1; self.weight_value_1 = weight_value_1
         self.weight_threshold_2 = weight_threshold_2; self.weight_value_2 = weight_value_2
