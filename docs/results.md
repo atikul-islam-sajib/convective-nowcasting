@@ -26,7 +26,6 @@ the 15 and 30 minute lead times), then applied unchanged to the test set:
 | Motion estimation method | LK, VET | LK |
 | Nowcast method | Extrapolation, S-PROG | Extrapolation |
 | Extrapolation interpolation | Nearest, Bilinear | Bilinear |
-| History frames | 3, 5 | 5 |
 | Persistence blending | On, Off | Off |
 
 ## Dataset scale

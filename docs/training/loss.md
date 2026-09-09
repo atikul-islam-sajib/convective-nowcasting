@@ -38,6 +38,10 @@ data's precipitation distribution:
 | 4 | ≥ 25.0 | 25.0 |
 | 5 | ≥ 40.0 | 40.0 |
 
+The 15, 25, and 40 mm/h thresholds correspond to the DWD (German Weather
+Service) *Starkregen* warning criteria; the 3 and 7 mm/h thresholds represent
+lower intensities.
+
 ## 2. Gradient sharpness penalty
 
 $\mathcal{L}_{\text{grad},h}$ compares the spatial gradients of the

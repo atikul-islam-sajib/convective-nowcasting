@@ -59,13 +59,19 @@ minutes. **Spatial size**: resized to 256 × 256 for training.
 
 ## Splits
 
-### Table 3.9 — Temporal dataset split across periods
+### Tables 3.9 / 3.10 — Temporal dataset split and sample counts
 
-| Split | Period | Duration | Purpose |
-|---|---|---|---|
-| Training | 2015–2022 | 8 years | Parameter optimisation |
-| Validation | 2023 | 1 year | Hyperparameter tuning |
-| Test | 2024 | 1 year | Final evaluation |
+| Split | Period | Duration | Samples before sampling | Samples after sampling |
+|---|---|---|---|---|
+| Training | 2015–2022 | 8 years | 27,197,532 | 12,851,153 |
+| Validation | 2023 | 1 year | 3,377,596 | 1,586,763 |
+| Test | 2024 | 1 year | — | 32,021 |
+
+Train/validation counts are patch-level (256×256) samples for the JJAS
+season, before and after the two-bucket quantile sampling procedure. The
+test set was **not** subsampled — the reported count is the complete set
+of valid JJAS timepoints, evaluated at the full-domain level via
+sliding-window inference rather than at the patch level.
 
 ## Seasonal subsetting
 

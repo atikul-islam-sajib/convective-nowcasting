@@ -24,8 +24,8 @@ All five architectures are trained under identical optimization settings
 | Learning rate | 1e-4 |
 | Weight decay | 1e-3 |
 | Gradient clipping | 0.5 |
-| LR schedule | One-cycle (max LR 3e-4) |
-| Batch size | 16 |
+| LR schedule | Cosine annealing ($\eta_{min}=5\times10^{-6}$, $T_{max}=50$) |
+| Batch size (accumulation steps) | 16 (2) |
 | Max epochs | 50 |
 | Early stopping patience | 30 epochs |
 | Mixed precision | Yes |

@@ -1136,7 +1136,7 @@ def train(model, train_loader, val_loader, cfg, transform,
             cfg.weight_threshold_4, cfg.weight_value_4,
             cfg.weight_threshold_5, cfg.weight_value_5,
         ).to(cfg.device)
-        print("HybridWeightedMAE [5 thresholds: 3/7/15/25/35mm/h -> 3/7/15/25/35x]\n")
+        print("HybridWeightedMAE [5 thresholds: 3/7/15/25/40mm/h -> 3/7/15/25/40x]\n")
     elif cfg.loss_type == 'hybrid_weighted_mse':
         loss_fn = HybridWeightedMSE(
             cfg.weight_threshold_1, cfg.weight_value_1,
@@ -1145,7 +1145,7 @@ def train(model, train_loader, val_loader, cfg, transform,
             cfg.weight_threshold_4, cfg.weight_value_4,
             cfg.weight_threshold_5, cfg.weight_value_5,
         ).to(cfg.device)
-        print("HybridWeightedMSE [5 thresholds: 3/7/15/25/35mm/h -> 3/7/15/25/35x]\n")
+        print("HybridWeightedMSE [5 thresholds: 3/7/15/25/40mm/h -> 3/7/15/25/40x]\n")
     else:
         raise ValueError(f"Unknown loss_type: {cfg.loss_type}")
 
