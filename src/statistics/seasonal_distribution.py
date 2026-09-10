@@ -5,7 +5,7 @@ from collections import defaultdict
 import csv
 
 RADAR_DIR = Path("/home/fe/sajib/scratch/weather-data/radar_de")
-YEARS     = list(range(2016, 2025))
+YEARS     = list(range(2015, 2025))
 MAX_MM_H  = 128.0
 N_WORKERS = 16
 MINUTES_PER_FILE = 5.0
@@ -40,7 +40,7 @@ for yymm_dir in sorted(RADAR_DIR.iterdir()):
     if not (1 <= month <= 12):
         continue
 
-    season_year = year + 1 if month == 12 else year
+    season_year = year
     if season_year not in YEARS:
         continue
 
