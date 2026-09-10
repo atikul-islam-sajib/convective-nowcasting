@@ -36,8 +36,11 @@ CHECKPOINTS_*/
 *.ckpt
 
 # Generated data / metadata (large, regenerable)
-#metadata_patch/
-#metadata/*.csv
+metadata_patch/
+metadata/*.csv
+
+# ouput
+artifacts/inference/
 
 # Output directories from inference/visualization scripts
 INFERENCE_*/

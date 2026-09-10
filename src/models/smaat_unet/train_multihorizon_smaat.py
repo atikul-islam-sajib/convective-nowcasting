@@ -60,7 +60,7 @@ class SmaAtTrainingConfig:
     operational_threshold    = 15.0
     storm_threshold_json     = 'metadata/storm_threshold.json'
     use_extreme_from_data    = False
-    manual_extreme_threshold = 80.0
+    manual_extreme_threshold = 40.0
 
     # Output directories — separate from ConvLSTM and PredRNN
     checkpoint_dir = 'Checkpoints_SmaAt'

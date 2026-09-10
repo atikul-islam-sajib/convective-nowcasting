@@ -70,7 +70,7 @@ class MultiHorizonTrainingConfig:
     batch_size                  = 16
     gradient_accumulation_steps = 2
     num_workers                 = 24
-    prefetch_factor             = 2
+    prefetch_factor             = 4
 
     learning_rate = 1e-4
     weight_decay  = 1e-3
@@ -90,7 +90,7 @@ class MultiHorizonTrainingConfig:
 
     cosine_eta_min = 5e-6
     cosine_eta_max = 5e-5
-    cosine_T_max   = 30
+    cosine_T_max   = 50
     cosine_T_0     = 30
 
     plateau_mode      = 'min'

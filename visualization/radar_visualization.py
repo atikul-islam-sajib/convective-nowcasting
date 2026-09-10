@@ -46,7 +46,7 @@ class GTGridConfig:
     horizons    = [15, 30, 45, 60]         
 
     operational_thr      = 15.0
-    extreme_thr          = 35.0
+    extreme_thr          = 40.0
     storm_min_pixels     = 200
     morphology_disk_size = 4
     storm_min_area_km2   = 200.0

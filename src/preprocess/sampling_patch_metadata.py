@@ -199,13 +199,13 @@ def get_parser():
     parser.add_argument(
         '--p99_top_ratio',
         type=float,
-        default=0.40,
+        default=0.3829,
         help="Top bucket ratio: fraction of samples treated as heavy rain (default: 0.3829)",
     )
     parser.add_argument(
         '--prob',
         type=float,
-        default=0.60,
+        default=0.6171,
         help="Keep probability for top bucket (default: 0.6171). Rest kept with (1-prob).",
     )
     

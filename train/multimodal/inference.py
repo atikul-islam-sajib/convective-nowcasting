@@ -16,7 +16,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from skimage.morphology import closing, remove_small_objects, disk
-from skimage.metrics import structural_similarity
 from scipy.ndimage import label
 from einops import rearrange
 from omegaconf import OmegaConf
@@ -67,15 +66,13 @@ class InferenceConfig:
     metadata_csv = 'metadata_patch/test_fullimage_summer.csv'
 
     detailed_metrics_csv = os.path.join(out_dir, 'dl_fullimage_metrics.csv')
-    mean_metrics_csv       = os.path.join(out_dir, 'dl_fullimage_mean_metrics.csv')
-    pooled_mean_metrics_csv = os.path.join(out_dir, 'dl_fullimage_pooled_mean_metrics.csv')
-    simple_mean_metrics_csv = os.path.join(out_dir, 'dl_fullimage_simple_mean_metrics.csv')
+    mean_metrics_csv      = os.path.join(out_dir, 'dl_fullimage_mean_metrics.csv')
 
     radar_base = '/home/fe/sajib/scratch/weather-data/radar_de'
     sat_base   = '/home/fe/sajib/scratch/weather-data/satellite_de_regridded'
 
     channels       = ['CH7', 'CH9']
-    num_in_frames  = 4 # RADOLAN YW t itself 5 mins precipitation
+    num_in_frames  = 4
     stride_minutes = 5
     horizons       = [15, 30, 45, 60]
 
@@ -132,8 +129,9 @@ class InferenceConfig:
     zerovalue_db        = -15.0
     psnr_data_range      = CLIP_MAX_MMH
 
-    csi_threshold_mmh      = [5.0, 15.0]
     categorical_thresholds = [5.0, 15.0]
+
+    save_images = True
 
     ensemble_weights = {"smaat_unet": 1.0, "convlstm": 1.0, "simvp": 1.0, "earthformer": 1.0, "unet": 1.0, "vptr": 1.0}
 
@@ -214,114 +212,41 @@ def compute_metrics(prediction, target, mask, cfg):
     y = target[valid]
     mae = np.mean(np.abs(p - y))
     mse = np.mean((p - y) ** 2)
-    rmse = np.sqrt(mse)
     psnr = compute_psnr(p, y, cfg.psnr_data_range)
-    if valid.sum() < 100:
-        ssim = float('nan')
-    else:
-        pred_ssim = np.where(valid, prediction, 0.0)
-        target_ssim = np.where(valid, target, 0.0)
-        _, ssim_map = structural_similarity(
-            target_ssim, pred_ssim, data_range=cfg.psnr_data_range,
-            gaussian_weights=True, sigma=1.5,
-            use_sample_covariance=False, full=True)
-        ssim = float(ssim_map[valid].mean())
 
-    result = {'MAE': float(mae), 'MSE': float(mse), 'RMSE': float(rmse),
-              'PSNR': float(psnr), 'SSIM': float(ssim)}
-
-    csi_thresholds = cfg.csi_threshold_mmh
-    if np.isscalar(csi_thresholds):
-        csi_thresholds = [csi_thresholds]
-
-    all_needed = set(csi_thresholds) | set(cfg.categorical_thresholds)
-    counts_by_threshold = {threshold: contingency_counts(p, y, threshold) for threshold in all_needed}
-
-    for threshold in csi_thresholds:
-        suffix = str(int(threshold)) if float(threshold).is_integer() else str(threshold)
-        h, m, fa, cn = counts_by_threshold[threshold]
-        result[f'CSI@{suffix}'] = csi_from_counts(h, m, fa)
-        result[f'THR{suffix}_csi_hits'] = h
-        result[f'THR{suffix}_csi_misses'] = m
-        result[f'THR{suffix}_csi_fa'] = fa
-        result[f'THR{suffix}_csi_cn'] = cn
+    result = {'MAE': float(mae), 'MSE': float(mse), 'PSNR': float(psnr)}
 
     for threshold in cfg.categorical_thresholds:
         suffix = str(int(threshold)) if float(threshold).is_integer() else str(threshold)
-        h, m, fa, cn = counts_by_threshold[threshold]
-        result[f'ETS@{suffix}'] = ets_from_counts(h, m, fa, cn)
-        result[f'THR{suffix}_ets_hits'] = h
-        result[f'THR{suffix}_ets_misses'] = m
-        result[f'THR{suffix}_ets_fa'] = fa
-        result[f'THR{suffix}_ets_cn'] = cn
+        h, m, fa, cn = contingency_counts(p, y, threshold)
+        result[f'THR{suffix}_hits'] = h
+        result[f'THR{suffix}_misses'] = m
+        result[f'THR{suffix}_fa'] = fa
+        result[f'THR{suffix}_cn'] = cn
 
     return result
 
-def compute_pooled_mean(metrics_df, cfg):
-    ratio_cols = ['MAE', 'MSE', 'RMSE', 'PSNR', 'SSIM']
-    csi_thresholds = cfg.csi_threshold_mmh
-    if np.isscalar(csi_thresholds):
-        csi_thresholds = [csi_thresholds]
 
+def compute_pooled_mean(metrics_df, cfg):
     rows = []
     for (model, horizon), g in metrics_df.groupby(['model', 'horizon_min']):
-        row = {'model': model, 'horizon_min': horizon, 'n_samples': len(g)}
-        for col in ratio_cols:
-            row[col] = g[col].mean()
+        row = {'model': model, 'horizon_min': horizon}
+        row['MAE'] = g['MAE'].mean()
+        row['MSE'] = g['MSE'].mean()
+        row['PSNR'] = g['PSNR'].mean()
 
-        csi_vals = []
-        for threshold in csi_thresholds:
-            suffix = str(int(threshold)) if float(threshold).is_integer() else str(threshold)
-            h = g[f'THR{suffix}_csi_hits'].sum()
-            m = g[f'THR{suffix}_csi_misses'].sum()
-            fa = g[f'THR{suffix}_csi_fa'].sum()
-            csi = csi_from_counts(h, m, fa)
-            row[f'CSI@{suffix}'] = csi
-            csi_vals.append(csi)
-
-        ets_vals = []
+        csi_vals, ets_vals = [], []
         for threshold in cfg.categorical_thresholds:
             suffix = str(int(threshold)) if float(threshold).is_integer() else str(threshold)
-            h = g[f'THR{suffix}_ets_hits'].sum()
-            m = g[f'THR{suffix}_ets_misses'].sum()
-            fa = g[f'THR{suffix}_ets_fa'].sum()
-            cn = g[f'THR{suffix}_ets_cn'].sum()
-            ets = ets_from_counts(h, m, fa, cn)
-            row[f'ETS@{suffix}'] = ets
-            ets_vals.append(ets)
+            h = g[f'THR{suffix}_hits'].sum()
+            m = g[f'THR{suffix}_misses'].sum()
+            fa = g[f'THR{suffix}_fa'].sum()
+            cn = g[f'THR{suffix}_cn'].sum()
+            csi_vals.append(csi_from_counts(h, m, fa))
+            ets_vals.append(ets_from_counts(h, m, fa, cn))
 
-        row['CSI-M'] = float(np.nanmean(csi_vals)) if csi_vals else float('nan')
-        row['ETS-M'] = float(np.nanmean(ets_vals)) if ets_vals else float('nan')
-        rows.append(row)
-    return pd.DataFrame(rows)
-
-
-def compute_simple_mean(metrics_df, cfg):
-    csi_thresholds = cfg.csi_threshold_mmh
-    if np.isscalar(csi_thresholds):
-        csi_thresholds = [csi_thresholds]
-
-    value_cols = ['MAE', 'MSE', 'RMSE', 'PSNR', 'SSIM']
-    value_cols += [
-        f'CSI@{str(int(t)) if float(t).is_integer() else str(t)}'
-        for t in csi_thresholds
-    ]
-    value_cols += [
-        f'ETS@{str(int(t)) if float(t).is_integer() else str(t)}'
-        for t in cfg.categorical_thresholds
-    ]
-    value_cols = [c for c in value_cols if c in metrics_df.columns]
-
-    rows = []
-    for (model, horizon), g in metrics_df.groupby(['model', 'horizon_min']):
-        row = {'model': model, 'horizon_min': horizon, 'n_samples': len(g)}
-        for col in value_cols:
-            row[col] = float(np.nanmean(g[col]))
-
-        csi_cols = [c for c in value_cols if c.startswith('CSI@')]
-        ets_cols = [c for c in value_cols if c.startswith('ETS@')]
-        row['CSI-M'] = float(np.nanmean([row[c] for c in csi_cols])) if csi_cols else float('nan')
-        row['ETS-M'] = float(np.nanmean([row[c] for c in ets_cols])) if ets_cols else float('nan')
+        row['CSI'] = float(np.nanmean(csi_vals)) if csi_vals else float('nan')
+        row['ETS'] = float(np.nanmean(ets_vals)) if ets_vals else float('nan')
         rows.append(row)
     return pd.DataFrame(rows)
 
@@ -614,8 +539,6 @@ def compute_ensemble(preds, horizons, ensemble_weights=None):
     else:
         weights = ensemble_weights
 
-    total_weight = sum(weights[k] for k in REAL_MODEL_KEYS)
-
     ensemble = {}
     for h in horizons:
         weighted_sum = sum(
@@ -623,7 +546,6 @@ def compute_ensemble(preds, horizons, ensemble_weights=None):
             for k in REAL_MODEL_KEYS
             if k in preds
         )
-        n_available = sum(1 for k in REAL_MODEL_KEYS if k in preds)
         w_sum       = sum(weights[k] for k in REAL_MODEL_KEYS if k in preds)
         ensemble[h] = weighted_sum / w_sum
 
@@ -888,11 +810,8 @@ def main():
     parser.add_argument("--device", type=str, default=None, choices=["cuda", "cpu"])
     parser.add_argument("--show_storm_metrics", action="store_true")
     parser.add_argument("--rain_threshold", type=float, default=None)
-    parser.add_argument("--csi_threshold_mmh", type=float, nargs="+", default=None)
-    parser.add_argument("--mean_type", type=str, default="pooled",
-                        choices=["pooled", "simple"],
-                        help="Which averaging method mean_metrics_csv mirrors "
-                             "(both CSVs are always written regardless).")
+    parser.add_argument("--categorical_thresholds", type=float, nargs="+", default=None)
+    parser.add_argument("--no_images", action="store_true")
     args = parser.parse_args()
 
     cfg = InferenceConfig()
@@ -915,20 +834,18 @@ def main():
         cfg.show_storm_metrics = True
     if args.rain_threshold is not None:
         cfg.rain_threshold = args.rain_threshold
-    if args.csi_threshold_mmh is not None:
-        cfg.csi_threshold_mmh = args.csi_threshold_mmh
+    if args.categorical_thresholds is not None:
+        cfg.categorical_thresholds = args.categorical_thresholds
+    if args.no_images:
+        cfg.save_images = False
 
     cfg.detailed_metrics_csv = os.path.join(cfg.out_dir, "dl_fullimage_metrics.csv")
     cfg.mean_metrics_csv = os.path.join(cfg.out_dir, "dl_fullimage_mean_metrics.csv")
-    cfg.pooled_mean_metrics_csv = os.path.join(cfg.out_dir, "dl_fullimage_pooled_mean_metrics.csv")
-    cfg.simple_mean_metrics_csv = os.path.join(cfg.out_dir, "dl_fullimage_simple_mean_metrics.csv")
 
     os.makedirs(cfg.out_dir, exist_ok=True)
 
     df     = pd.read_csv(cfg.metadata_csv)
     df_top = df.nlargest(cfg.num_samples, 'p99(x_seq)').reset_index(drop=True)
-
-    metrics_flag = getattr(cfg, 'show_storm_metrics', False)
 
     models = load_all_models(cfg)
     n_hor  = len(cfg.horizons)
@@ -951,26 +868,12 @@ def main():
             if mkey == 'ensemble':
                 continue
 
-            mlabel = minfo['label']
             pred_cpu = run_model(models[mkey], input_tensor, n_hor, cfg)
             pred_np  = pred_cpu.squeeze(0).numpy()
             preds[mkey] = {h: inverse_transform_np(pred_np[h_idx])
                            for h_idx, h in enumerate(cfg.horizons)}
 
-            maes = [
-                f"t+{h}="
-                f"{np.abs(preds[mkey][h][masks[h]>0.5] - gt_mm[h][masks[h]>0.5]).mean():.2f}"
-                for h in cfg.horizons
-                if masks[h].sum() > 0
-            ]
-
         preds['ensemble'] = compute_ensemble(preds, cfg.horizons, cfg.ensemble_weights)
-        ens_maes = [
-            f"t+{h}="
-            f"{np.abs(preds['ensemble'][h][masks[h]>0.5] - gt_mm[h][masks[h]>0.5]).mean():.2f}"
-            for h in cfg.horizons
-            if masks[h].sum() > 0
-        ]
 
         for minfo in MODELS:
             mkey   = minfo['key']
@@ -982,33 +885,25 @@ def main():
                 row_result = {"model": mlabel, "datetime": dt.strftime("%Y-%m-%d %H:%M:%S"), "horizon_min": h}
                 row_result.update(metrics)
                 all_metrics.append(row_result)
-        """
-        #If we wart to save the results to a file
-            dt = {
+
+        if cfg.save_images:
+            sd = {
                 'dt':    dt,
                 'gt_mm': gt_mm,
                 'masks': masks,
                 'preds': preds,
                 'p99':   float(row['p99(x_seq)']),
             }
-
-            out_fname = f"sample_{idx+1:02d}_{str(dt)[:10]}_{str(dt)[11:16].replace(':','')}.png"
+            out_fname = f"sample_{idx+1:02d}_{str(dt)[:10]}_{str(dt)[11:16].replace(':', '')}.png"
             out_path  = os.path.join(cfg.out_dir, out_fname)
             save_single_sample(sd, cfg, out_path, idx)
-        """
 
     if all_metrics:
         metrics_df = pd.DataFrame(all_metrics)
         metrics_df.to_csv(cfg.detailed_metrics_csv, index=False)
 
-        pooled_df = compute_pooled_mean(metrics_df, cfg)
-        pooled_df.to_csv(cfg.pooled_mean_metrics_csv, index=False)
-
-        simple_df = compute_simple_mean(metrics_df, cfg)
-        simple_df.to_csv(cfg.simple_mean_metrics_csv, index=False)
-
-        (pooled_df if args.mean_type == "pooled" else simple_df).to_csv(
-            cfg.mean_metrics_csv, index=False)
+        mean_df = compute_pooled_mean(metrics_df, cfg)
+        mean_df.to_csv(cfg.mean_metrics_csv, index=False)
 
 
 if __name__ == "__main__":

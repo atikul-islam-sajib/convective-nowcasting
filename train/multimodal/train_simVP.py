@@ -93,7 +93,7 @@ class MultiHorizonTrainingConfig:
 
     cosine_eta_min = 5e-6
     cosine_eta_max = 5e-5
-    cosine_T_max   = 30
+    cosine_T_max   = 50
     cosine_T_0     = 30
 
     plateau_mode      = 'min'
