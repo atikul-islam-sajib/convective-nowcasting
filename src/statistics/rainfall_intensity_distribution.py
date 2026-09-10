@@ -6,9 +6,8 @@ from collections import Counter
 
 BASE_DIR = Path("/home/fe/sajib/scratch/weather-data/radar_de")
 YEARS    = list(range(2015, 2025))
-SCALE    = 1.0 
+SCALE    = 1.0
 CLASSES  = ["No Rain", "Light", "Moderate", "Heavy"]
-THRESHOLDS = [0.1, 1.0, 5.0, 10.0]
 
 
 def process_file(fp_str: str):
@@ -23,21 +22,17 @@ def process_file(fp_str: str):
             return {"ok": False, "dtype": dtype_str, "error": "empty_after_filter"}
 
         no_rain  = int(np.sum(valid <  0.1))
-        light    = int(np.sum((valid >= 0.1)  & (valid <  2.5)))
-        moderate = int(np.sum((valid >= 2.5)  & (valid < 10.0)))
+        light    = int(np.sum((valid >= 0.1) & (valid < 2.5)))
+        moderate = int(np.sum((valid >= 2.5) & (valid < 10.0)))
         heavy    = int(np.sum(valid >= 10.0))
         total    = int(valid.size)
 
-        ge_0_1  = light + moderate + heavy          
-        ge_1_0  = int(np.sum(valid >= 1.0))
-        ge_5_0  = int(np.sum(valid >= 5.0))
-        ge_10_0 = heavy                             
+        assert no_rain + light + moderate + heavy == total, "class counts do not sum to total"
 
         return {
             "ok": True,
             "dtype": dtype_str,
             "no_rain": no_rain, "light": light, "moderate": moderate, "heavy": heavy,
-            "ge_0_1": ge_0_1, "ge_1_0": ge_1_0, "ge_5_0": ge_5_0, "ge_10_0": ge_10_0,
             "total": total,
         }
     except Exception as e:
@@ -60,7 +55,6 @@ def collect_files(year: int) -> list[str]:
 
 def aggregate(raw: list, n_files_found: int) -> dict:
     counts = {"No Rain": 0, "Light": 0, "Moderate": 0, "Heavy": 0}
-    ge = {"ge_0_1": 0, "ge_1_0": 0, "ge_5_0": 0, "ge_10_0": 0}
     total = 0
     n_ok = n_failed = 0
     error_counter = Counter()
@@ -77,13 +71,9 @@ def aggregate(raw: list, n_files_found: int) -> dict:
         counts["Light"]    += r["light"]
         counts["Moderate"] += r["moderate"]
         counts["Heavy"]    += r["heavy"]
-        ge["ge_0_1"]  += r["ge_0_1"]
-        ge["ge_1_0"]  += r["ge_1_0"]
-        ge["ge_5_0"]  += r["ge_5_0"]
-        ge["ge_10_0"] += r["ge_10_0"]
         total += r["total"]
 
-    result = {
+    return {
         "counts": counts,
         "total": total,
         "n_files_found": n_files_found,
@@ -92,37 +82,55 @@ def aggregate(raw: list, n_files_found: int) -> dict:
         "error_counter": error_counter,
         "dtype_counter": dtype_counter,
     }
-    for k, v in ge.items():
-        result[k] = (100.0 * v / total) if total > 0 else 0.0
-    return result
 
 
-def build_table_3_6(rows: list[dict]) -> str:
+def build_table_3_5(rows: list[dict]) -> str:
     lines = []
     lines.append(r"\begin{table}[htbp]")
     lines.append(r"    \centering")
-    lines.append(r"    \caption{Annual precipitation threshold analysis.}")
-    lines.append(r"    \label{tab:precip_threshold_analysis}")
-    lines.append(r"    \begin{tabular}{l cccc}")
+    lines.append(r"    \caption{Annual RADOLAN Rainfall Intensity Distribution, Germany, 2015--2024}")
+    lines.append(r"    \label{tab:radar_rainfall_dist}")
+    lines.append(r"    \resizebox{\textwidth}{!}{%")
+    lines.append(r"    \begin{tabular}{l rr rr rr rr}")
     lines.append(r"        \toprule")
     lines.append(
-        r"        \textbf{Year} & \textbf{$\ge$0.1 mm/h (\%)} & \textbf{$\ge$1.0 mm/h (\%)} "
-        r"& \textbf{$\ge$5.0 mm/h (\%)} & \textbf{$\ge$10.0 mm/h (\%)} \\"
+        r"        & \multicolumn{2}{c}{\textbf{No Rain ($<$0.1)}} "
+        r"& \multicolumn{2}{c}{\textbf{Light (0.1--2.5)}} "
+        r"& \multicolumn{2}{c}{\textbf{Moderate (2.5--10)}} "
+        r"& \multicolumn{2}{c}{\textbf{Heavy ($>$10)}} \\"
+    )
+    lines.append(
+        r"        \textbf{Year} & \textbf{Pixels} & \textbf{\%} & \textbf{Pixels} & \textbf{\%} "
+        r"& \textbf{Pixels} & \textbf{\%} & \textbf{Pixels} & \textbf{\%} \\"
     )
     lines.append(r"        \midrule")
 
     for r in rows:
+        t = r["total"]
+        c = r["counts"]
         lines.append(
-            f"        {r['year']} & {r['ge_0_1']:.3f} & {r['ge_1_0']:.3f} "
-            f"& {r['ge_5_0']:.3f} & {r['ge_10_0']:.3f} \\\\"
+            f"        {r['year']} "
+            f"& {c['No Rain']:>12,} & {100*c['No Rain']/t:>5.1f} "
+            f"& {c['Light']:>10,} & {100*c['Light']/t:>5.1f} "
+            f"& {c['Moderate']:>10,} & {100*c['Moderate']/t:>5.1f} "
+            f"& {c['Heavy']:>8,} & {100*c['Heavy']/t:>5.1f} \\\\"
         )
 
+    tot_pixels = sum(r["total"] for r in rows)
+    tot_counts = {cls: sum(r["counts"][cls] for r in rows) for cls in CLASSES}
+    lines.append(r"        \midrule")
+    lines.append(
+        f"        \\textbf{{Total}} "
+        f"& \\textbf{{{tot_counts['No Rain']:>12,}}} & \\textbf{{{100*tot_counts['No Rain']/tot_pixels:>5.1f}}} "
+        f"& \\textbf{{{tot_counts['Light']:>10,}}} & \\textbf{{{100*tot_counts['Light']/tot_pixels:>5.1f}}} "
+        f"& \\textbf{{{tot_counts['Moderate']:>10,}}} & \\textbf{{{100*tot_counts['Moderate']/tot_pixels:>5.1f}}} "
+        f"& \\textbf{{{tot_counts['Heavy']:>8,}}} & \\textbf{{{100*tot_counts['Heavy']/tot_pixels:>5.1f}}} \\\\"
+    )
     lines.append(r"        \bottomrule")
-    lines.append(r"    \end{tabular}")
+    lines.append(r"    \end{tabular}}")
     lines.append(r"    \begin{tablenotes}")
     lines.append(r"        \small")
-    lines.append(r"        \item Percentages computed from all valid 5-minute RADOLAN composites for each year.")
-    lines.append(r"        \item Computed from the same per-file pass used for Table~\ref{tab:radar_rainfall_dist} (Table 3.5), guaranteeing consistent totals across both tables.")
+    lines.append(r"        \item Rainfall thresholds in mm/h. Pixel counts aggregated over all 5-minute RADOLAN composites per year.")
     lines.append(r"    \end{tablenotes}")
     lines.append(r"\end{table}")
     return "\n".join(lines)
@@ -132,8 +140,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--workers", type=int, default=min(cpu_count(), 16))
     parser.add_argument("--output_dir", type=str, default=None)
-    parser.add_argument("--years", type=int, nargs="+", default=None,
-                         help="Restrict to specific years, e.g. --years 2024")
+    parser.add_argument("--years", type=int, nargs="+", default=None)
     args = parser.parse_args()
 
     output_dir = Path(args.output_dir) if args.output_dir \
@@ -143,7 +150,7 @@ def main():
     years_to_run = args.years if args.years else YEARS
 
     print(f"\n{'#'*60}")
-    print(f"  Table 3.6 generation")
+    print(f"  Table 3.5 generation")
     print(f"  Years    : {years_to_run}")
     print(f"  Workers  : {args.workers}")
     print(f"  Output   : {output_dir}")
@@ -170,24 +177,18 @@ def main():
         if result["error_counter"]:
             print(f"  Failure reasons   : {dict(result['error_counter'])}")
         print(f"  Dtypes seen       : {dict(result['dtype_counter'])}")
-        print(f"  TOTAL PIXELS      : {t:,}")
-        print(f"  >=0.1mm/h (Table 3.6 style)   : {result['ge_0_1']:.3f}%")
-        c = result["counts"]
-        if t > 0:
-            print(f"  Light+Mod+Heavy (Table 3.5 style): {100*(c['Light']+c['Moderate']+c['Heavy'])/t:.3f}%")
-            print(f"  [these two lines must match -- if not, something is wrong in this script]\n")
+        print(f"  TOTAL PIXELS      : {t:,}\n")
 
     if not rows:
         print("No data processed. Check BASE_DIR and year folder names.")
         return
 
-    tex_3_6 = build_table_3_6(rows)
+    tex_3_5 = build_table_3_5(rows)
+    path_3_5 = output_dir / "table_3_5_final.tex"
+    path_3_5.write_text(tex_3_5)
 
-    path_3_6 = output_dir / "table_3_6_final.tex"
-    path_3_6.write_text(tex_3_6)
-
-    print(f"\n--- Table 3.6 ---\n{tex_3_6}")
-    print(f"\nSaved: {path_3_6}")
+    print(f"\n--- Table 3.5 ---\n{tex_3_5}")
+    print(f"\nSaved: {path_3_5}")
 
 
 if __name__ == "__main__":
