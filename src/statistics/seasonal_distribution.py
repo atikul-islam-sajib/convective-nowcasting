@@ -5,9 +5,11 @@ from collections import defaultdict
 import csv
 
 RADAR_DIR = Path("/home/fe/sajib/scratch/weather-data/radar_de")
-YEARS     = list(range(2015, 2025))
+YEARS     = list(range(2016, 2025))
 MAX_MM_H  = 128.0
 N_WORKERS = 16
+MINUTES_PER_FILE = 5.0
+HOURS_PER_FILE = MINUTES_PER_FILE / 60.0 
 
 INVALID_SENTINELS = {-1.0, -9999.0, 9999.0}
 
@@ -56,22 +58,20 @@ if len(all_files) == 0:
 def load_mean(path: Path) -> float:
     try:
         arr = np.load(path, mmap_mode="r").astype(np.float32)
-        valid = np.isfinite(arr)
 
+        valid = np.isfinite(arr)
         for sentinel in INVALID_SENTINELS:
             valid &= (arr != sentinel)
-
         valid &= (arr >= 0.0)
-        n_valid = int(valid.sum())
 
+        n_valid = int(valid.sum())
         if n_valid < 100:
             return np.nan
-        
-        values = np.clip(arr[valid], 0.0, MAX_MM_H)
 
+        values = np.clip(arr[valid], 0.0, MAX_MM_H)
         return float(values.mean())
 
-    except Exception as e:
+    except Exception:
         return np.nan
 
 
@@ -93,12 +93,15 @@ if len(finite_arr) > 0:
     print(f"  Max (finite): {finite_arr.max():.4f}")
     print(f"  Mean (all finite, no sentinel masking): {finite_arr.mean():.6f}")
 mean_diag = load_mean(first_path)
-print(f"  Mean (after full NaN handling): {mean_diag:.6f}")
+print(f"  Mean rate (after full NaN handling): {mean_diag:.6f} mm/h")
+print(f"  -> equivalent depth for this one 5-min window: "
+      f"{mean_diag * HOURS_PER_FILE:.6f} mm")
 print()
 
 print(f"Loading {len(all_files):,} files with {N_WORKERS} workers …")
-buckets     = defaultdict(list)
-skipped     = 0
+mean_buckets  = defaultdict(list)   
+depth_buckets = defaultdict(float)  
+skipped = 0
 
 def process(item):
     sy, season, path = item
@@ -108,9 +111,10 @@ with ThreadPoolExecutor(max_workers=N_WORKERS) as ex:
     futures = {ex.submit(process, item): item for item in all_files}
     done = 0
     for fut in as_completed(futures):
-        sy, season, mean = fut.result()
-        if not np.isnan(mean):
-            buckets[(sy, season)].append(mean)
+        sy, season, mean_rate = fut.result()
+        if not np.isnan(mean_rate):
+            mean_buckets[(sy, season)].append(mean_rate)
+            depth_buckets[(sy, season)] += mean_rate * HOURS_PER_FILE
         else:
             skipped += 1
         done += 1
@@ -120,37 +124,62 @@ with ThreadPoolExecutor(max_workers=N_WORKERS) as ex:
 
 print(f"\nDone. Skipped {skipped:,} files (all-NaN or unreadable).")
 
+# ── BUILD TABLE ───────────────────────────────────────────────────────────────
 seasons = ["Winter", "Spring", "Summer", "Autumn"]
 
-print("\n")
+print("\n--- Mean Intensity (mm/h) ---")
 header = f"{'Year':<6}" + "".join(f"{s:>12}" for s in seasons)
 print(header)
 print("-" * len(header))
 
 rows = []
 for year in YEARS:
-    row = [year]
+    row = {"Year": year}
     for season in seasons:
-        vals = buckets.get((year, season), [])
-        mean = float(np.mean(vals)) if vals else float("nan")
-        row.append(mean)
+        vals = mean_buckets.get((year, season), [])
+        row[f"{season}_mean"] = float(np.mean(vals)) if vals else float("nan")
+        row[f"{season}_accum"] = depth_buckets.get((year, season), float("nan"))
     rows.append(row)
     cells = "".join(
-        f"{v:>12.5f}" if not np.isnan(v) else f"{'N/A':>12}"
-        for v in row[1:]
+        f"{row[f'{s}_mean']:>12.5f}" if not np.isnan(row[f"{s}_mean"]) else f"{'N/A':>12}"
+        for s in seasons
     )
     print(f"{year:<6}{cells}")
 
-out_csv = Path("seasonal_rainfall.csv")
-with open(out_csv, "w", newline="") as f:
+print("\n--- Total Accumulation (mm) ---")
+header2 = f"{'Year':<6}" + "".join(f"{s:>12}" for s in seasons) + f"{'Annual':>12}"
+print(header2)
+print("-" * len(header2))
+for row in rows:
+    annual = sum(row[f"{s}_accum"] for s in seasons if not np.isnan(row[f"{s}_accum"]))
+    row["Annual_accum"] = annual
+    cells = "".join(
+        f"{row[f'{s}_accum']:>12.1f}" if not np.isnan(row[f"{s}_accum"]) else f"{'N/A':>12}"
+        for s in seasons
+    )
+    print(f"{row['Year']:<6}{cells}{annual:>12.1f}")
+
+out_csv_mean = Path("seasonal_rainfall_mean.csv")
+with open(out_csv_mean, "w", newline="") as f:
     writer = csv.writer(f)
     writer.writerow(["Year"] + seasons)
     for row in rows:
         writer.writerow(
-            [row[0]] + [
-                f"{v:.5f}" if not np.isnan(v) else "N/A"
-                for v in row[1:]
+            [row["Year"]] + [
+                f"{row[f'{s}_mean']:.5f}" if not np.isnan(row[f"{s}_mean"]) else "N/A"
+                for s in seasons
             ]
         )
+print(f"\nSaved mean intensities → {out_csv_mean.resolve()}")
 
-print(f"\nSaved → {out_csv.resolve()}")
+out_csv_accum = Path("seasonal_rainfall_accumulation.csv")
+with open(out_csv_accum, "w", newline="") as f:
+    writer = csv.writer(f)
+    writer.writerow(["Year"] + seasons + ["Annual"])
+    for row in rows:
+        writer.writerow(
+            [row["Year"]] + [
+                f"{row[f'{s}_accum']:.1f}" for s in seasons
+            ] + [f"{row['Annual_accum']:.1f}"]
+        )
+print(f"Saved total accumulations → {out_csv_accum.resolve()}")
