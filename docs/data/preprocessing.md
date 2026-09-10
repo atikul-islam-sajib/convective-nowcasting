@@ -25,10 +25,10 @@ To address the natural imbalance between light and heavy precipitation,
 patches are sampled with two parameters:
 
 - **`r` (top-bucket ratio)** — the fraction of patches (ranked by the 99th
-  percentile rainfall in the sequence) considered "heavy rain": **r = 0.40**.
+  percentile rainfall in the sequence) considered "heavy rain": **r = 0.3829**.
 - **`p` (keep probability)** — the probability that a top-bucket patch is
   retained; the remaining patches are kept with probability `1 - p`:
-  **p = 0.60**.
+  **p = 0.6171**.
 
 ## Normalization
 
@@ -146,7 +146,7 @@ u_i < 1-p & \text{if } i \in B^{-}
 \qquad (3.8)
 $$
 
-**Selected values:** $r = 0.40$, $p = 0.60$ — chosen from the empirical
+**Selected values:** $r = 0.3829$, $p = 0.6171$ — chosen from the empirical
 proportion of training patches containing measurable precipitation. Since
 $p = 1-r$, this gives a 1:1 balance between the heavy and dry buckets.
 Completely dry patches always fall in $B^{-}$. No synthetic data are
