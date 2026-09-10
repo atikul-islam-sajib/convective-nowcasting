@@ -1272,10 +1272,10 @@
 patches are sampled with two parameters:</p>
 <ul>
 <li><strong><code>r</code> (top-bucket ratio)</strong> — the fraction of patches (ranked by the 99th
-  percentile rainfall in the sequence) considered "heavy rain": <strong>r = 0.40</strong>.</li>
+  percentile rainfall in the sequence) considered "heavy rain": <strong>r = 0.3829</strong>.</li>
 <li><strong><code>p</code> (keep probability)</strong> — the probability that a top-bucket patch is
   retained; the remaining patches are kept with probability <code>1 - p</code>:
-  <strong>p = 0.60</strong>.</li>
+  <strong>p = 0.6171</strong>.</li>
 </ul>
 <h2 id="normalization">Normalization</h2>
 <table>
@@ -1378,7 +1378,7 @@ u_i &lt; 1-p &amp; \text{if } i \in B^{-}
 \end{cases}
 \qquad (3.8)
 \]</div>
-<p><strong>Selected values:</strong> <span class="arithmatex">\(r = 0.40\)</span>, <span class="arithmatex">\(p = 0.60\)</span> — chosen from the empirical
+<p><strong>Selected values:</strong> <span class="arithmatex">\(r = 0.3829\)</span>, <span class="arithmatex">\(p = 0.6171\)</span> — chosen from the empirical
 proportion of training patches containing measurable precipitation. Since
 <span class="arithmatex">\(p = 1-r\)</span>, this gives a 1:1 balance between the heavy and dry buckets.
 Completely dry patches always fall in <span class="arithmatex">\(B^{-}\)</span>. No synthetic data are
