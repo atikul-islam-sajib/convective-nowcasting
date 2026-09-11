@@ -25,16 +25,16 @@ All five architectures are trained under identical optimization settings
 | Weight decay | 1e-3 |
 | Gradient clipping | 0.5 |
 | LR schedule | Cosine annealing ($\eta_{min}=5\times10^{-6}$, $T_{max}=50$) |
-| Batch size (accumulation steps) | 16 (2) |
+| Batch size | 16 |
+| Accumulation steps | 2 |
 | Max epochs | 50 |
 | Early stopping patience | 30 epochs |
 | Mixed precision | Yes |
 | Data workers | 24 (prefetch factor 4) |
 | Hardware | 4 × NVIDIA Tesla V100-PCIE (32 GB) |
 | Framework | PyTorch |
-| Containerization | Docker |
-| Experiment tracking | MLflow |
-| Hyperparameter search | Optuna |
+| Containerisation | Docker |
+| Hyperparameter search | Grid Search |
 
 For each architecture, the checkpoint with the highest **ETS** on the
 validation set was selected — ETS accounts for hits expected by chance and
