@@ -1,6 +1,6 @@
 {
-    "percentile": 95.0,
-    "global_threshold": 4.91796875,
+    "percentile": 99.0,
+    "global_threshold": 39.91796875,
     "unit": "mm/5min",
     "source_csv": "metadata/train_sampled.csv",
     "total_pixels": 1149026021,
