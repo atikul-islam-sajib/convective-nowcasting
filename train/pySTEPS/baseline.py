@@ -60,7 +60,7 @@ class Config:
     active_rain_threshold_mmh = 1.0
     subset_seed = 42
     use_existing_subset_manifest = True
-    num_samples = 1
+    num_samples = None
     select_top_p99 = True
     select_on_the_hour = False
     csi_threshold_mmh = 15.0  

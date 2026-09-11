@@ -28,6 +28,6 @@ docker run --gpus all --shm-size=8g -v $(pwd):/workspace nowcast-multimodal \
 docker run --gpus all --shm-size=8g -v $(pwd):/workspace nowcast-multimodal \
        python train/multimodal/train_smaAt_UNet.py
 docker run --gpus all --shm-size=8g -v $(pwd):/workspace nowcast-multimodal \
-       python train/multimodal/inference.py --num_samples 10
+       python train/multimodal/inference.py
 ENTRYPOINT ["python"]
 CMD ["--version"]

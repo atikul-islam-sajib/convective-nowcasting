@@ -14,7 +14,6 @@ GRID = {
     'motion_method': ['LK'],
     'nowcast_method': ['extrapolation', 'sprog'],
     'extrap_interp_order': [0, 1],
-    'lk_num_frames': [3, 5],
     'disable_persistence_blend': [False, True],
 }
 
@@ -22,7 +21,6 @@ QUICK_GRID = {
     'motion_method': ['LK'],
     'nowcast_method': ['extrapolation'],
     'extrap_interp_order': [0, 1],
-    'lk_num_frames': [5],
     'disable_persistence_blend': [False],
 }
 
@@ -49,7 +47,7 @@ def config_to_args(cfg, out_dir, manifest_path, trial_num_processes=1):
         '--motion_method', cfg['motion_method'],
         '--nowcast_method', cfg['nowcast_method'],
         '--extrap_interp_order', str(cfg['extrap_interp_order']),
-        '--lk_num_frames', str(cfg['lk_num_frames']),
+        '--lk_num_frames', '4',
     ]
     if cfg['disable_persistence_blend']:
         args.append('--disable_persistence_blend')
