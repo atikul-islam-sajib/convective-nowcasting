@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=prep-02-metadata
+#SBATCH --job-name=nowcasting
 #SBATCH --partition=cpu
 #SBATCH --time=1-00:00:00
 #SBATCH --nodes=1
@@ -11,7 +11,7 @@
  
 source ~/miniconda3/etc/profile.d/conda.sh
 conda activate weather
-cd /home/sajib/Desktop/convective-nowcasting
+cd ~/projects/weather-learning
  
 export PYTHONPATH=$PWD:$PWD/src
  

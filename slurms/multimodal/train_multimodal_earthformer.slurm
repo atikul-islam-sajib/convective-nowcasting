@@ -1,22 +1,19 @@
 #!/bin/bash
-#SBATCH --job-name=mm-earthformer
+#SBATCH --job-name=nowcasting
 #SBATCH --partition=gpu
 #SBATCH --time=3-00:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=24
-#SBATCH --gres=gpu:2
+#SBATCH --gres=gpu:4
 #SBATCH --mem=128G
 #SBATCH --output=logs/%x-%j.out
 #SBATCH --error=logs/%x-%j.err
  
 source ~/miniconda3/etc/profile.d/conda.sh
 conda activate weather
-cd /home/sajib/Desktop/convective-nowcasting
+cd ~/projects/weather-learning
  
-# train/*.py scripts import both "utils.*"/"datasets.*" (expects src/ on
-# the path) and "src.models.*" (expects the repo root on the path), so
-# both directories must be on PYTHONPATH.
 export PYTHONPATH=$PWD:$PWD/src
  
 python -u train/multimodal/train_earthformer.py
