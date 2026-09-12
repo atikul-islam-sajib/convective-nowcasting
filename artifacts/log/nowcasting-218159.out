@@ -1,0 +1,19 @@
+======================================================================
+PATCH METADATA GENERATION — TRAIN
+======================================================================
+Radar base:      /home/fe/sajib/scratch/weather-data/radar_de
+Satellite base:  /home/fe/sajib/scratch/weather-data/satellite_de_regridded
+Date range:      2015-01-01 00:00 → 2015-08-31 23:55
+Patch size:      128x128
+Patch stride:    96
+Input frames:    9 × 5min
+Horizons:        [15, 30, 45, 60] min
+Channels:        ['CH7', 'CH9']
+Summer only:     False
+NaN threshold:   0.3
+Workers:         48
+Output:          metadata_patch/train_patch_128x128_s96_all.csv
+======================================================================
+Patch positions: 99
+Timepoints:      23,328
+======================================================================

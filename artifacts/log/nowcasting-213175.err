@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "/home/fe/sajib/projects/weather-learning/sanity_check_data_correct5.py", line 22, in <module>
+    idxs = rng.randint(0, len(train_dataset), size=N)
+NameError: name 'train_dataset' is not defined

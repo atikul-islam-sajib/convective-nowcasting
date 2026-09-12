@@ -1,0 +1,40 @@
+
+======================================================================
+TEST VISUALIZATION — TOP-5 BY p99(x)
+  Device      : cuda
+  Checkpoint  : VALVIZ_CONVLSTM_CORRECT_CLIP6_COSINE_4W_ST_SMALL_DATA_S/best.pth
+  Test CSV    : metadata/test_sampled_multihorizon.csv
+  Horizons    : [15, 30, 45, 60] min
+  Top-K       : 5
+  Rank by     : p99(x)  (raw mm/h, no log transform)
+======================================================================
+
+
+======================================================================
+ SatelliteRadarDataset Initialized (MULTI-HORIZON)
+======================================================================
+Metadata: metadata/test_sampled_multihorizon.csv
+Satellite Configuration:
+  Ch7: mean=36.83, std=12.58 (no clipping)
+  Ch9: mean=65.70, std=19.36 (no clipping)
+Radar Configuration:
+  Clip: [0, 128.00] mm/hr
+  Transform: log10(x + 0.001)
+Temporal Configuration:
+  History: 45 min
+  Cadence: 5 min
+  Forecast horizons: [15, 30, 45, 60] min
+  n_horizons: 4
+
+Initial samples: 8,357
+
+  → 9 timesteps
+  → Satellite: 18 channels
+  → Radar history: 9 channels
+  → Total input: 27 channels
+  → Target: [4, H, W] (one frame per horizon)
+======================================================================
+
+Test dataset: 8,357 samples
+
+Loading checkpoint: VALVIZ_CONVLSTM_CORRECT_CLIP6_COSINE_4W_ST_SMALL_DATA_S/best.pth

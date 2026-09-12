@@ -1,0 +1,100 @@
+
+======================================================================
+SOFTLOG TRANSFORM SANITY CHECK
+Old (eps=0.001) vs New (eps=1.0, normalized)
+======================================================================
+
+======================================================================
+TRANSFORM COMPARISON — Forward (mm/h → log space)
+======================================================================
+mm/h     OLD (eps=0.001)      NEW (eps=1, norm)    Diff
+----------------------------------------------------------------------
+0        -3.0000              0.0000               +3.0000
+0.1      -0.9957              0.0196               +1.0153
+0.5      -0.3002              0.0834               +0.3836
+1        0.0004               0.1426               +0.1422
+2        0.3012               0.2261               -0.0752
+5        0.6991               0.3687               -0.3304
+10       1.0000               0.4934               -0.5066 ← convective
+20       1.3011               0.6265               -0.6746
+40       1.6021               0.7641               -0.8379
+80       1.9031               0.9042               -0.9989
+128      2.1072               1.0000               -1.1072
+
+OLD range: [-3.000, 2.107]  total=5.107
+NEW range: [0.000, 1.000]  total=1.000
+
+0–1 mm/h range occupies:
+  OLD: 3.000 / 5.107 = 58.7% of total  ❌
+  NEW: 0.143 / 1.000 = 14.3% of total  ✅
+
+10 mm/h position in range:
+  OLD: 1.000  =  78.3% of range
+  NEW: 0.493  =  49.3% of range  (midpoint=50%) ✅
+======================================================================
+
+Loading 500 val frames from metadata/val_multihorizon.csv...
+Loaded 280,568,752 valid pixels from 500 frames
+
+======================================================================
+PIXEL DISTRIBUTION STATS — Val Data
+======================================================================
+
+  mm/h distribution:
+    == 0 mm/h   : 92.24%
+    < 0.1 mm/h  : 92.24%
+    < 1.0 mm/h  : 97.41%
+    >= 10 mm/h  : 0.0704%  ← convective
+    >= 20 mm/h  : 0.0147%  ← heavy convective
+
+  OLD transform space distribution:
+    mean : -2.7838
+    min  : -3.0000
+    max  : 2.1072
+    p50  : -3.0000
+    p99  : 0.4219
+
+  NEW transform space distribution:
+    mean : 0.0101
+    min  : 0.0000  (was -3.0000)
+    max  : 1.0000  (was 2.1072)
+    p50  : 0.0000
+    p99  : 0.2659
+
+  Convective pixels (>=10 mm/h) in transform space:
+    Count : 197,573 (0.0704% of all pixels)
+
+    OLD: mean=1.1832  range=[1.0034, 2.1072]
+    OLD: 99.9% of ALL pixels are BELOW convective minimum
+         → convective pixels at TOP 0.1% of range  ❌ squeezed
+
+    NEW: mean=0.5745  range=[0.4949, 1.0000]
+    NEW: 99.9% of ALL pixels are BELOW convective minimum
+         → convective pixels spread over larger range  ✅
+
+  Reconstruction error (forward → inverse → original):
+    OLD max error: 0.00003815 mm/h  ✅
+    NEW max error: 0.00004018 mm/h  ✅
+======================================================================
+
+  Plot saved → sanity_check_transform.png
+
+======================================================================
+FINAL VERDICT
+======================================================================
+
+  Convective pixels (>=10mm/h) = 0.0704% of data
+
+  In OLD transform:
+    10-128 mm/h occupies 21.7% of transform range
+    But only 0.0704% of pixels are there
+    → Model sees these pixels but in a TINY part of output space
+
+  In NEW transform:
+    10-128 mm/h occupies 50.7% of transform range
+    → Convective pixels get MORE output space  ✅
+    → WeightedLoss now actually reaches them   ✅
+
+  RECOMMENDATION: Use NEW transform ✅
+======================================================================
+

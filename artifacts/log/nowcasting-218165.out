@@ -1,0 +1,123 @@
+
+================================================================================
+MULTI-HORIZON TRAINING v4 — PATCH-BASED 1km/pixel
+================================================================================
+  Device        : cuda
+  Loss Function : hybrid_weighted_mse
+  Resolution    : 128x128 @ 1km/pixel (native patch)
+  Train CSV     : metadata_patch/train_patch_128x128_s128_all_sampled.csv
+  Val CSV       : metadata_patch/val_patch_128x128_s128_all_sampled.csv
+  LR Scheduler  : cosine_annealing
+  Horizons      : [15, 30, 45, 60]
+
+================================================================================
+TWO-THRESHOLD STRATEGY  [DATA UNIT: mm/h]
+================================================================================
+  Operational : 10.0 mm/h
+  Extreme     : 20.0 mm/h (Manual fallback)
+================================================================================
+
+
+================================================================================
+CLIP CONFIGURATION VERIFICATION  [eps=1.0, normalized, zerovalue=0.02]
+================================================================================
+  clip_max      : 128.00 mm/h
+  SoftLog eps   : 1.0
+  LOG_NORM      : 2.1106
+  ZEROVALUE     : 0.01  (FIX 41)
+  0    mm/h → 0.0020  (mapped to 0.02)
+  2    mm/h → 0.2261  ← weight_threshold_1
+  5    mm/h → 0.3687  ← weight_threshold_2 / ETS
+  10   mm/h → 0.4934  ← weight_threshold_3
+  20   mm/h → 0.6265  ← weight_threshold_4
+  128  mm/h → 1.0000
+================================================================================
+
+
+📂 Loading datasets...
+
+======================================================================
+ SatelliteRadarPatchDataset (PATCH-BASED MULTI-HORIZON)
+======================================================================
+ Metadata CSV:     metadata_patch/train_patch_128x128_s128_all_sampled.csv
+ Radar root:       /home/fe/sajib/scratch/weather-data/radar_de
+ Satellite root:   /home/fe/sajib/scratch/weather-data/satellite_de_regridded
+ Patch size:       128x128 (native 1km/pixel)
+ Input frames:     9 × 5min
+ Channels:         ['CH7', 'CH9']
+ Horizons:         [15, 30, 45, 60] min
+ n_horizons:       4
+ Radar clip max:   128.0 mm/h
+ Transform:        log10(x + 0.001)
+  CH7: mean=36.83, std=12.58
+  CH9: mean=65.70, std=19.36
+======================================================================
+ Initial samples: 62,079
+
+ Input tensor:  [27, 128, 128]
+   Satellite:   18 channels (2 ch × 9 frames)
+   Radar hist:  9 channels (1 ch × 9 frames)
+ Target tensor: [4, 128, 128]
+ Total samples: 62,079
+======================================================================
+
+
+======================================================================
+ SatelliteRadarPatchDataset (PATCH-BASED MULTI-HORIZON)
+======================================================================
+ Metadata CSV:     metadata_patch/val_patch_128x128_s128_all_sampled.csv
+ Radar root:       /home/fe/sajib/scratch/weather-data/radar_de
+ Satellite root:   /home/fe/sajib/scratch/weather-data/satellite_de_regridded
+ Patch size:       128x128 (native 1km/pixel)
+ Input frames:     9 × 5min
+ Channels:         ['CH7', 'CH9']
+ Horizons:         [15, 30, 45, 60] min
+ n_horizons:       4
+ Radar clip max:   128.0 mm/h
+ Transform:        log10(x + 0.001)
+  CH7: mean=36.83, std=12.58
+  CH9: mean=65.70, std=19.36
+======================================================================
+ Initial samples: 13,763
+
+ Input tensor:  [27, 128, 128]
+   Satellite:   18 channels (2 ch × 9 frames)
+   Radar hist:  9 channels (1 ch × 9 frames)
+ Target tensor: [4, 128, 128]
+ Total samples: 13,763
+======================================================================
+
+
+✅ Train: 62,079 | Val: 13,763
+
+🏗️  Building Model...
+   Input shape:      torch.Size([27, 128, 128])
+   n_timesteps:      9
+   channels/step:    3  (CH7 + CH9 + radar)
+   Total channels:   27 (expected 27)
+   Parameters: 9,032,564
+
+================================================================================
+MULTI-HORIZON TRAINING v4 — PATCH-BASED 1km/pixel
+================================================================================
+  Loss Type       : HYBRID_WEIGHTED_MSE
+  FIX 39 Weights  : 2.0mm/h→2.0x  5.0mm/h→5.0x  10.0mm/h→10.0x  20.0mm/h→20.0x
+  FIX 41 Zero     : L_rain + 0.05 * L_zero  (zerovalue=0.01)
+  ETS@            : 5 mm/h
+  Extreme@        : 10 mm/h
+  Horizons        : [15, 30, 45, 60] min
+  LR Scheduler    : cosine_annealing
+  Mixed Precision : True
+  Resolution      : 128x128 @ 1km/pixel (PATCH)
+================================================================================
+
+✅ HybridWeightedMSE [4 thresholds + L_rain/L_zero split — FIX 39+41]
+
+✅ AdamW | LR=1.00e-04
+✅ Mixed Precision ENABLED
+
+
+================================================================================
+EPOCH 1/30
+================================================================================
+  Horizon weights: [1.0, 1.0, 1.0, 1.0]

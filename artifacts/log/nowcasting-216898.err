@@ -1,0 +1,21 @@
+  Train E01:   0%|          | 0/3980 [00:00<?, ?batch/s]  Train E01:   0%|          | 0/3980 [00:16<?, ?batch/s]
+Traceback (most recent call last):
+  File "/home/fe/sajib/projects/weather-learning/correct_code_clip6_cosine_annealing_4W_ST_simVP.py", line 1213, in <module>
+    train(model, train_loader, val_loader, cfg,
+  File "/home/fe/sajib/projects/weather-learning/correct_code_clip6_cosine_annealing_4W_ST_simVP.py", line 1014, in train
+    train_metrics = train_epoch(
+  File "/home/fe/sajib/projects/weather-learning/correct_code_clip6_cosine_annealing_4W_ST_simVP.py", line 778, in train_epoch
+    pred = model(inputs)                          # [B, T_out, 1, H, W]
+  File "/home/fe/sajib/miniconda3/envs/weather/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/fe/sajib/miniconda3/envs/weather/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/fe/sajib/projects/weather-learning/correct_code_clip6_cosine_annealing_4W_ST_simVP.py", line 243, in forward
+    Y = self.dec(hid, skip)               # [B*T, C=3, H, W]
+  File "/home/fe/sajib/miniconda3/envs/weather/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/fe/sajib/miniconda3/envs/weather/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/fe/sajib/projects/weather-learning/correct_code_clip6_cosine_annealing_4W_ST_simVP.py", line 169, in forward
+    Y = self.dec[-1](torch.cat([hid, enc1], dim=1))
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 2.25 GiB. GPU 0 has a total capacity of 15.89 GiB of which 1.77 GiB is free. Including non-PyTorch memory, this process has 14.12 GiB memory in use. Of the allocated memory 13.11 GiB is allocated by PyTorch, and 736.54 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)

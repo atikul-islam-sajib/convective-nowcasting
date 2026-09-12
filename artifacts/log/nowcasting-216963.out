@@ -1,0 +1,116 @@
+
+================================================================================
+SimVP MULTI-HORIZON NOWCASTING
+================================================================================
+  Device       : cuda
+  Loss         : hybrid_weighted_mse
+  LR Scheduler : cosine_annealing
+  Horizons     : [15, 30, 45, 60]
+
+================================================================================
+TWO-THRESHOLD STRATEGY
+  Operational : 10.0 mm/h
+  Extreme     : 20.0 mm/h (Manual fallback)
+================================================================================
+
+
+📂 Loading datasets...
+
+======================================================================
+ SatelliteRadarDataset Initialized (MULTI-HORIZON)
+======================================================================
+Metadata: metadata/train_sampled_multihorizon.csv
+Satellite Configuration:
+  Ch7: mean=36.83, std=12.58 (no clipping)
+  Ch9: mean=65.70, std=19.36 (no clipping)
+Radar Configuration:
+  Clip: [0, 128.00] mm/hr
+  Transform: log10(x + 0.001)
+Temporal Configuration:
+  History: 45 min
+  Cadence: 5 min
+  Forecast horizons: [15, 30, 45, 60] min
+  n_horizons: 4
+
+Initial samples: 127,342
+
+  → 9 timesteps
+  → Satellite: 18 channels
+  → Radar history: 9 channels
+  → Total input: 27 channels
+  → Target: [4, H, W] (one frame per horizon)
+======================================================================
+
+
+======================================================================
+ SatelliteRadarDataset Initialized (MULTI-HORIZON)
+======================================================================
+Metadata: metadata/val_sampled_multihorizon.csv
+Satellite Configuration:
+  Ch7: mean=36.83, std=12.58 (no clipping)
+  Ch9: mean=65.70, std=19.36 (no clipping)
+Radar Configuration:
+  Clip: [0, 128.00] mm/hr
+  Transform: log10(x + 0.001)
+Temporal Configuration:
+  History: 45 min
+  Cadence: 5 min
+  Forecast horizons: [15, 30, 45, 60] min
+  n_horizons: 4
+
+Initial samples: 16,940
+
+  → 9 timesteps
+  → Satellite: 18 channels
+  → Radar history: 9 channels
+  → Total input: 27 channels
+  → Target: [4, H, W] (one frame per horizon)
+======================================================================
+
+
+✅ Train: 127,342 | Val: 16,940
+
+🏗️  Building SimVP Model...
+   Parameters: 15,561,863
+
+================================================================================
+SIMVP MULTI-HORIZON TRAINING
+================================================================================
+  Loss          : HYBRID_WEIGHTED_MSE
+  Horizons      : [15, 30, 45, 60] min
+  LR Scheduler  : cosine_annealing
+  Mixed Prec    : False
+================================================================================
+
+✅ HybridWeightedMSE
+
+✅ AdamW | LR=1.00e-04
+
+================================================================================
+EPOCH 1/30
+================================================================================
+
+  Results (Time: 11218.2s | LR: 9.975349e-05):
+    Train Loss : 0.047875
+    Val   Loss : 0.041871
+    Avg ETS@5mm/h : 0.1615
+    Avg CSI@5mm/h : 0.1686
+
+  Verification @ 5 mm/h:
+  Horizon    MAE(mm/h)    RMSE(mm/h)   ETS        CSI       
+  ------------------------------------------------------
+  t+15      0.42         1.00         0.2456     0.2522    
+  t+30      0.56         1.16         0.1693     0.1764    
+  t+45      0.69         1.29         0.1283     0.1357    
+  t+60      0.81         1.37         0.1028     0.1103     ← PRIMARY
+  AVG        ---          ---          0.1615     0.1686      ← AVG
+
+  Extreme @ 15 mm/h:
+  Horizon    CSI        BaseRate    
+  --------------------------------
+  t+15      0.0325     0.000796    
+  t+30      0.0056     0.000798    
+  t+45      0.0005     0.000798    
+  t+60      0.0000     0.000797    
+
+  Creating visualizations (epoch 1)...

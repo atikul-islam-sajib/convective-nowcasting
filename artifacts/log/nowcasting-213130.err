@@ -1,0 +1,8 @@
+/home/fe/sajib/projects/weather-learning/sanity_check_data_correct2.py:72: UserWarning: To copy construct from a tensor, it is recommended to use sourceTensor.detach().clone() or sourceTensor.detach().clone().requires_grad_(True), rather than torch.tensor(sourceTensor).
+  x = torch.tensor(x).unsqueeze(0).to(DEVICE)
+Traceback (most recent call last):
+  File "/home/fe/sajib/projects/weather-learning/sanity_check_data_correct2.py", line 109, in <module>
+    main()
+  File "/home/fe/sajib/projects/weather-learning/sanity_check_data_correct2.py", line 77, in main
+    n_horizons = len(horizons)
+TypeError: object of type 'int' has no len()

@@ -1,0 +1,138 @@
+
+================================================================================
+MULTI-HORIZON TRAINING — ConvLSTM Direct Multi-Step v2
+================================================================================
+  Device        : cuda
+  Loss Function : masked_mse  [mm/h space]
+  Data Unit     : mm/h  (NO *12 conversion)
+  Clip Max      : 128.0 mm/h
+  LR Scheduler  : cosine_annealing
+  Horizons      : [15, 30, 45, 60]
+  n_horizons    : 4
+
+================================================================================
+TWO-THRESHOLD STRATEGY  [DATA UNIT: mm/h]
+================================================================================
+  Operational : 5.0 mm/h
+  Extreme     : 15.0 mm/h (Manual fallback)
+================================================================================
+
+
+================================================================================
+CLIP CONFIGURATION VERIFICATION  [DATA UNIT: mm/h]
+================================================================================
+  clip_max          : 128.00 mm/h
+  log space max     : 2.1072
+  10  mm/h in log   : 1.0000  (47.5% of range)
+  50  mm/h in log   : 1.6990  (80.6% of range)
+  80  mm/h in log   : 1.9031  (90.3% of range)
+  128 mm/h in log   : 2.1072  (100.0% of range)
+  Artifact threshold: 150.0 mm/h → nan
+  NOTE: Data is mm/h — NO *12 conversion applied
+================================================================================
+
+
+�� Loading datasets...
+
+======================================================================
+ SatelliteRadarDataset Initialized (MULTI-HORIZON)
+======================================================================
+Metadata: metadata/train_sampled_multihorizon.csv
+Satellite Configuration:
+  Ch7: mean=36.83, std=12.58 (no clipping)
+  Ch9: mean=65.70, std=19.36 (no clipping)
+Radar Configuration:
+  Clip: [0, 128.00] mm/hr
+  Transform: log10(x + 0.001)
+Temporal Configuration:
+  History: 45 min
+  Cadence: 5 min
+  Forecast horizons: [15, 30, 45, 60] min
+  n_horizons: 4
+
+Initial samples: 86,274
+
+  → 9 timesteps
+  → Satellite: 18 channels
+  → Radar history: 9 channels
+  → Total input: 27 channels
+  → Target: [4, H, W] (one frame per horizon)
+======================================================================
+
+
+======================================================================
+ SatelliteRadarDataset Initialized (MULTI-HORIZON)
+======================================================================
+Metadata: metadata/val_sampled_multihorizon.csv
+Satellite Configuration:
+  Ch7: mean=36.83, std=12.58 (no clipping)
+  Ch9: mean=65.70, std=19.36 (no clipping)
+Radar Configuration:
+  Clip: [0, 128.00] mm/hr
+  Transform: log10(x + 0.001)
+Temporal Configuration:
+  History: 45 min
+  Cadence: 5 min
+  Forecast horizons: [15, 30, 45, 60] min
+  n_horizons: 4
+
+Initial samples: 13,066
+
+  → 9 timesteps
+  → Satellite: 18 channels
+  → Radar history: 9 channels
+  → Total input: 27 channels
+  → Target: [4, H, W] (one frame per horizon)
+======================================================================
+
+
+✅ Train: 86,274 | Val: 13,066
+
+🏗️  Building Multi-Horizon ConvLSTM Model...
+   history_minutes     : 45
+   cadence_minutes     : 5
+   n_timesteps         : 9
+   channels_per_step   : 3  (2 sat + 1 radar)
+   total input channels: 27  (expected 27)
+   output channels     : 4  (one per horizon)
+   Parameters          : 9,032,564
+
+================================================================================
+MULTI-HORIZON TRAINING — DIRECT MULTI-STEP SUPERVISED LEARNING v2
+================================================================================
+  Data Unit       : mm/h (NO *12 conversion)
+  Clip Max        : 128.0 mm/h
+  Artifact Thr    : 150.0 mm/h → nan
+  Loss Type       : MASKED_MSE  [log-space loss, mm/h weights]
+  Horizons        : [15, 30, 45, 60] min
+  Horizon weights : [1.0, 1.0, 1.0, 1.0]  (FIXED)
+  Learning Rate   : 1.00e-04
+  Batch Size      : 16
+  Grad Accum      : 4x (effective: 64)
+  LR Scheduler    : cosine_annealing
+  Save Best By    : Val Loss (lower = better)
+  ETS Report      : 1
+  Viz MinRain     : 15.0 mm/h
+  Verification    : ETS+CSI@5 mm/h | CSI@15 mm/h (extreme, secondary)
+  Mixed Precision : True
+================================================================================
+
+✅ Using MaskedMSE [log-space loss]
+
+✅ AdamW | LR=1.00e-04
+  LR Scheduler    : CosineAnnealingLR | T_max=30 | range=[5.0e-05, 1.0e-04]
+
+✅ Mixed Precision Training ENABLED
+
+
+================================================================================
+RESUMING FROM: CHECKPOINTS_CONVLSTM_CORRECT_CLIP3/last.pth
+Resumed from epoch 8 | Best Val Loss: 0.451031
+Continuing from epoch 9
+================================================================================
+
+
+================================================================================
+EPOCH 9/30
+================================================================================
+  Horizon weights: [1.0, 1.0, 1.0, 1.0]

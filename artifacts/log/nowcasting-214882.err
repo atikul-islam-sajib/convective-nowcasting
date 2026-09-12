@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "/home/fe/sajib/projects/weather-learning/presample_quantile_metadata.py", line 249, in <module>
+    main()
+  File "/home/fe/sajib/projects/weather-learning/presample_quantile_metadata.py", line 239, in main
+    presample_all_splits(
+  File "/home/fe/sajib/projects/weather-learning/presample_quantile_metadata.py", line 180, in presample_all_splits
+    df_sampled = presample_metadata(
+  File "/home/fe/sajib/projects/weather-learning/presample_quantile_metadata.py", line 64, in presample_metadata
+    raise FileNotFoundError(f"Input CSV not found: {input_csv}")
+FileNotFoundError: Input CSV not found: metadata/train.csv

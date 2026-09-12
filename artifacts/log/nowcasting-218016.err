@@ -1,0 +1,9 @@
+Traceback (most recent call last):
+  File "/home/fe/sajib/projects/weather-learning/presample_patch_metadata.py", line 351, in <module>
+    presample_all_splits(
+  File "/home/fe/sajib/projects/weather-learning/presample_patch_metadata.py", line 248, in presample_all_splits
+    df_sampled = presample_metadata(
+  File "/home/fe/sajib/projects/weather-learning/presample_patch_metadata.py", line 91, in presample_metadata
+    raise FileNotFoundError(
+FileNotFoundError: Input CSV not found: metadata_patch/train_patch_128x128_s64_all.csv
+Run generate_metadata_patch.py first.

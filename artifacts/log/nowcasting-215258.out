@@ -1,0 +1,7 @@
+zero         : 86.398%  (weight: 1.0x)
+0_to_1       : 7.622%  (weight: 1.0x)
+1_to_5       : 4.807%  (weight: 1.0x)
+5_to_10      : 0.939%  (weight: 5.0x)
+10_to_20     : 0.178%  (weight: 20.0x)
+above_20     : 0.057%  (weight: 50.0x)
+Total pixels : 294,069,457,870

@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "/home/fe/sajib/projects/weather-learning/train_multihorizon_33_33_all_SMAAT_UNET.py", line 1261, in <module>
+    kernels_per_layer=cfg.kernels_per_layer,
+AttributeError: 'MultiHorizonTrainingConfig' object has no attribute 'kernels_per_layer'

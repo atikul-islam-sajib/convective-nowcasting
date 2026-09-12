@@ -1,0 +1,96 @@
+
+================================================================================
+PRE-SAMPLING ALL SPLITS (TRAIN, VAL, TEST)
+Exact Zarr Approach: Apply sampling to all splits
+================================================================================
+
+================================================================================
+PRE-SAMPLING TRAIN METADATA
+================================================================================
+Input:  metadata/train_multihorizon.csv
+Output: metadata/train_sampled_multihorizon.csv
+Parameters: p99_top_ratio=0.3, prob=0.9, seed=42
+================================================================================
+
+Loading metadata from: metadata/train_multihorizon.csv
+Loaded 157,539 samples
+
+  Removing 10 samples with invalid p99(x)
+Remaining samples after cleaning: 157,529
+
+SAMPLING STATISTICS:
+--------------------------------------------------------------------------------
+Quantile cutoff:     q=0.700 → threshold=2.640625
+Original samples:    top=47,635 | rest=109,894 | total=157,529
+Sampling probs:      top=0.90 | rest=0.10
+Kept samples:        top=42,841 | rest=10,936 | total=53,777
+Keep rate:           34.14%
+Top ratio (kept):    79.66% (vs 30.0% original)
+--------------------------------------------------------------------------------
+
+Saved sampled train metadata to: metadata/train_sampled_multihorizon.csv
+
+================================================================================
+PRE-SAMPLING VAL METADATA
+================================================================================
+Input:  metadata/val_multihorizon.csv
+Output: metadata/val_sampled_multihorizon.csv
+Parameters: p99_top_ratio=0.3, prob=0.9, seed=43
+================================================================================
+
+Loading metadata from: metadata/val_multihorizon.csv
+Loaded 64,691 samples
+
+  Removing 9 samples with invalid p99(x)
+Remaining samples after cleaning: 64,682
+
+SAMPLING STATISTICS:
+--------------------------------------------------------------------------------
+Quantile cutoff:     q=0.700 → threshold=2.759766
+Original samples:    top=20,052 | rest=44,630 | total=64,682
+Sampling probs:      top=0.90 | rest=0.10
+Kept samples:        top=18,018 | rest=4,429 | total=22,447
+Keep rate:           34.70%
+Top ratio (kept):    80.27% (vs 30.0% original)
+--------------------------------------------------------------------------------
+
+Saved sampled val metadata to: metadata/val_sampled_multihorizon.csv
+
+================================================================================
+PRE-SAMPLING TEST METADATA
+================================================================================
+Input:  metadata/test_multihorizon.csv
+Output: metadata/test_sampled_multihorizon.csv
+Parameters: p99_top_ratio=0.3, prob=0.9, seed=44
+================================================================================
+
+Loading metadata from: metadata/test_multihorizon.csv
+Loaded 24,549 samples
+
+  Removing 13 samples with invalid p99(x)
+Remaining samples after cleaning: 24,536
+
+SAMPLING STATISTICS:
+--------------------------------------------------------------------------------
+Quantile cutoff:     q=0.700 → threshold=1.439453
+Original samples:    top=7,443 | rest=17,093 | total=24,536
+Sampling probs:      top=0.90 | rest=0.10
+Kept samples:        top=6,698 | rest=1,659 | total=8,357
+Keep rate:           34.06%
+Top ratio (kept):    80.15% (vs 30.0% original)
+--------------------------------------------------------------------------------
+
+Saved sampled test metadata to: metadata/test_sampled_multihorizon.csv
+
+
+================================================================================
+SUMMARY - ALL SPLITS SAMPLED
+================================================================================
+  train: 53,777 samples (sampled)
+  val  : 22,447 samples (sampled)
+  test : 8,357 samples (sampled)
+
+ All splits pre-sampled successfully!
+ Ready to train with USE_PRESAMPLED_ALL=True
+================================================================================
+

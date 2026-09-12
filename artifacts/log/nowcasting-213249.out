@@ -1,0 +1,126 @@
+
+================================================================================
+TRAIN vs VAL vs TEST — mm/h RATIO CHECK
+================================================================================
+
+======================================================================
+ SatelliteRadarDataset Initialized (MULTI-HORIZON)
+======================================================================
+Metadata: metadata/train_sampled_multihorizon.csv
+Satellite Configuration:
+  Ch7: mean=36.83, std=12.58 (no clipping)
+  Ch9: mean=65.70, std=19.36 (no clipping)
+Radar Configuration:
+  Clip: [0, 128.00] mm/hr
+  Transform: log10(x + 0.001)
+Temporal Configuration:
+  History: 45 min
+  Cadence: 5 min
+  Forecast horizons: [15, 30, 45, 60] min
+  n_horizons: 4
+
+Initial samples: 127,342
+
+  → 9 timesteps
+  → Satellite: 18 channels
+  → Radar history: 9 channels
+  → Total input: 27 channels
+  → Target: [4, H, W] (one frame per horizon)
+======================================================================
+
+
+TRAIN
+----------------------------------------
+Pixel Mean mm/h      : 0.2357
+Pixel P95 mm/h       : 1.2938
+Pixel P99 mm/h       : 5.2554
+Frame Mean MAX mm/h  : 28.9570
+Frame Mean P99 mm/h  : 4.5979
+
+======================================================================
+ SatelliteRadarDataset Initialized (MULTI-HORIZON)
+======================================================================
+Metadata: metadata/val_sampled_multihorizon.csv
+Satellite Configuration:
+  Ch7: mean=36.83, std=12.58 (no clipping)
+  Ch9: mean=65.70, std=19.36 (no clipping)
+Radar Configuration:
+  Clip: [0, 128.00] mm/hr
+  Transform: log10(x + 0.001)
+Temporal Configuration:
+  History: 45 min
+  Cadence: 5 min
+  Forecast horizons: [15, 30, 45, 60] min
+  n_horizons: 4
+
+Initial samples: 16,940
+
+  → 9 timesteps
+  → Satellite: 18 channels
+  → Radar history: 9 channels
+  → Total input: 27 channels
+  → Target: [4, H, W] (one frame per horizon)
+======================================================================
+
+
+VAL
+----------------------------------------
+Pixel Mean mm/h      : 0.2684
+Pixel P95 mm/h       : 1.5766
+Pixel P99 mm/h       : 5.4991
+Frame Mean MAX mm/h  : 27.3136
+Frame Mean P99 mm/h  : 4.8780
+
+======================================================================
+ SatelliteRadarDataset Initialized (MULTI-HORIZON)
+======================================================================
+Metadata: metadata/test_sampled_multihorizon.csv
+Satellite Configuration:
+  Ch7: mean=36.83, std=12.58 (no clipping)
+  Ch9: mean=65.70, std=19.36 (no clipping)
+Radar Configuration:
+  Clip: [0, 128.00] mm/hr
+  Transform: log10(x + 0.001)
+Temporal Configuration:
+  History: 45 min
+  Cadence: 5 min
+  Forecast horizons: [15, 30, 45, 60] min
+  n_horizons: 4
+
+Initial samples: 16,926
+
+  → 9 timesteps
+  → Satellite: 18 channels
+  → Radar history: 9 channels
+  → Total input: 27 channels
+  → Target: [4, H, W] (one frame per horizon)
+======================================================================
+
+
+TEST
+----------------------------------------
+Pixel Mean mm/h      : 0.2678
+Pixel P95 mm/h       : 1.5581
+Pixel P99 mm/h       : 5.6507
+Frame Mean MAX mm/h  : 30.4018
+Frame Mean P99 mm/h  : 4.9755
+
+Ratio VAL / TRAIN
+----------------------------------------
+pixel_mean          : 1.139
+pixel_p95           : 1.219
+pixel_p99           : 1.046
+frame_max_mean      : 0.943
+frame_p99_mean      : 1.061
+
+Ratio TEST / TRAIN
+----------------------------------------
+pixel_mean          : 1.136
+pixel_p95           : 1.204
+pixel_p99           : 1.075
+frame_max_mean      : 1.050
+frame_p99_mean      : 1.082
+
+================================================================================
+DONE
+================================================================================

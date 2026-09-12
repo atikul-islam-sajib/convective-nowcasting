@@ -1,0 +1,35 @@
+======================================================================
+SATELLITE REGRIDDING — ALL SEASONS
+======================================================================
+Input dir:  /home/fe/sajib/scratch/weather-data/satellite_de
+Output dir: /home/fe/sajib/scratch/weather-data/satellite_de_regridded
+Workers:    8
+Limit:      10
+======================================================================
+Scanning for .npz files...
+Total .npz files found: 10
+Estimated output size: ~0 GB
+======================================================================
+Tasks scheduled: 10 | Already skipped: 0
+======================================================================
+======================================================================
+Done!
+Total processed: 10
+Skipped:         0
+Errors:          0
+Output saved to: /home/fe/sajib/scratch/weather-data/satellite_de_regridded
+======================================================================
+
+Verifying output files...
+  ✓ 000500_CH9.npy → shape (1100, 900), dtype float16
+  ✓ 000000_CH9.npy → shape (1100, 900), dtype float16
+  ✓ 001500_CH9.npy → shape (1100, 900), dtype float16
+  ✓ 001000_CH7.npy → shape (1100, 900), dtype float16
+  ✓ 000000_CH7.npy → shape (1100, 900), dtype float16
+  ✓ 002000_CH7.npy → shape (1100, 900), dtype float16
+  ✓ 001000_CH9.npy → shape (1100, 900), dtype float16
+  ✓ 002000_CH9.npy → shape (1100, 900), dtype float16
+  ✓ 001500_CH7.npy → shape (1100, 900), dtype float16
+  ✓ 000500_CH7.npy → shape (1100, 900), dtype float16
+
+All 10 sampled files correct ✓

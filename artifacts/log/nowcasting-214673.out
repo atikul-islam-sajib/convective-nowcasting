@@ -1,0 +1,948 @@
+
+================================================================================
+MULTI-HORIZON TRAINING — ConvLSTM Direct Multi-Step v2
+================================================================================
+  Device        : cuda
+  Loss Function : masked_mse  [mm/h space]
+  Data Unit     : mm/h  (NO *12 conversion)
+  Clip Max      : 128.0 mm/h
+  LR Scheduler  : cosine_annealing
+  Horizons      : [15, 30, 45, 60]
+  n_horizons    : 4
+
+================================================================================
+TWO-THRESHOLD STRATEGY  [DATA UNIT: mm/h]
+================================================================================
+  Operational : 5.0 mm/h
+  Extreme     : 15.0 mm/h (Manual fallback)
+================================================================================
+
+
+================================================================================
+CLIP CONFIGURATION VERIFICATION  [DATA UNIT: mm/h]
+================================================================================
+  clip_max          : 128.00 mm/h
+  log space max     : 2.1072
+  10  mm/h in log   : 1.0000  (47.5% of range)
+  50  mm/h in log   : 1.6990  (80.6% of range)
+  80  mm/h in log   : 1.9031  (90.3% of range)
+  128 mm/h in log   : 2.1072  (100.0% of range)
+  Artifact threshold: 150.0 mm/h → nan
+  NOTE: Data is mm/h — NO *12 conversion applied
+================================================================================
+
+
+�� Loading datasets...
+
+======================================================================
+ SatelliteRadarDataset Initialized (MULTI-HORIZON)
+======================================================================
+Metadata: metadata/train_sampled_multihorizon.csv
+Satellite Configuration:
+  Ch7: mean=36.83, std=12.58 (no clipping)
+  Ch9: mean=65.70, std=19.36 (no clipping)
+Radar Configuration:
+  Clip: [0, 128.00] mm/hr
+  Transform: log10(x + 0.001)
+Temporal Configuration:
+  History: 45 min
+  Cadence: 5 min
+  Forecast horizons: [15, 30, 45, 60] min
+  n_horizons: 4
+
+Initial samples: 86,274
+
+  → 9 timesteps
+  → Satellite: 18 channels
+  → Radar history: 9 channels
+  → Total input: 27 channels
+  → Target: [4, H, W] (one frame per horizon)
+======================================================================
+
+
+======================================================================
+ SatelliteRadarDataset Initialized (MULTI-HORIZON)
+======================================================================
+Metadata: metadata/val_sampled_multihorizon.csv
+Satellite Configuration:
+  Ch7: mean=36.83, std=12.58 (no clipping)
+  Ch9: mean=65.70, std=19.36 (no clipping)
+Radar Configuration:
+  Clip: [0, 128.00] mm/hr
+  Transform: log10(x + 0.001)
+Temporal Configuration:
+  History: 45 min
+  Cadence: 5 min
+  Forecast horizons: [15, 30, 45, 60] min
+  n_horizons: 4
+
+Initial samples: 13,066
+
+  → 9 timesteps
+  → Satellite: 18 channels
+  → Radar history: 9 channels
+  → Total input: 27 channels
+  → Target: [4, H, W] (one frame per horizon)
+======================================================================
+
+
+✅ Train: 86,274 | Val: 13,066
+
+🏗️  Building Multi-Horizon ConvLSTM Model...
+   history_minutes     : 45
+   cadence_minutes     : 5
+   n_timesteps         : 9
+   channels_per_step   : 3  (2 sat + 1 radar)
+   total input channels: 27  (expected 27)
+   output channels     : 4  (one per horizon)
+   Parameters          : 9,032,564
+
+================================================================================
+MULTI-HORIZON TRAINING — DIRECT MULTI-STEP SUPERVISED LEARNING v2
+================================================================================
+  Data Unit       : mm/h (NO *12 conversion)
+  Clip Max        : 128.0 mm/h
+  Artifact Thr    : 150.0 mm/h → nan
+  Loss Type       : MASKED_MSE  [log-space loss, mm/h weights]
+  Horizons        : [15, 30, 45, 60] min
+  Horizon weights : [1.0, 1.0, 1.0, 1.0]  (FIXED)
+  Learning Rate   : 1.00e-04
+  Batch Size      : 16
+  Grad Accum      : 4x (effective: 64)
+  LR Scheduler    : cosine_annealing
+  Save Best By    : Val Loss (lower = better)
+  ETS Report      : 1
+  Viz MinRain     : 15.0 mm/h
+  Verification    : ETS+CSI@5 mm/h | CSI@15 mm/h (extreme, secondary)
+  Mixed Precision : True
+================================================================================
+
+✅ Using MaskedMSE [log-space loss]
+
+✅ AdamW | LR=1.00e-04
+  LR Scheduler    : CosineAnnealingLR | T_max=30 | range=[5.0e-05, 1.0e-04]
+
+✅ Mixed Precision Training ENABLED
+
+Starting from scratch.
+
+
+================================================================================
+EPOCH 1/30
+================================================================================
+  Horizon weights: [1.0, 1.0, 1.0, 1.0]
+
+  Results (Time: 4200.7s | LR: 9.986305e-05):
+    Train Loss [log] : 0.579313
+    Val   Loss [log] : 0.470724
+    Avg ETS@5mm/h   : 0.0077
+    Avg CSI@5mm/h   : 0.0078
+
+  Operational Verification @ 5 mm/h:
+  Horizon    MAE(mm/h)    RMSE(mm/h)   ETS        CSI       
+  ------------------------------------------------------
+  t+15      0.20         1.08         0.0307     0.0312    
+  t+30      0.22         1.15         0.0000     0.0000    
+  t+45      0.23         1.18         0.0000     0.0000    
+  t+60      0.24         1.19         0.0000     0.0000     ← PRIMARY
+  AVG        ---          ---          0.0077     0.0078      ← AVG
+
+  Extreme Core @ 15 mm/h (secondary):
+  Horizon    CSI        BaseRate    
+  --------------------------------
+  t+15      0.0000     0.000984    
+  t+30      0.0000     0.000985    
+  t+45      0.0000     0.000984    
+  t+60      0.0000     0.000975    
+
+  Creating visualizations (epoch 1)...
+  Visualization saved: VALVIZ_CONVLSTM_CORRECT_CLIP4/epoch_001.png
+
+  ★★★ NEW BEST MODEL! Val Loss=0.4707 | ETS=0.0077 | CSI=0.0078 ★★★
+
+================================================================================
+EPOCH 2/30
+================================================================================
+  Horizon weights: [1.0, 1.0, 1.0, 1.0]
+
+  Results (Time: 4188.8s | LR: 9.945369e-05):
+    Train Loss [log] : 0.388709
+    Val   Loss [log] : 0.453133
+    Avg ETS@5mm/h   : 0.0079
+    Avg CSI@5mm/h   : 0.0080
+    Loss Change       : -0.017591
+
+  Operational Verification @ 5 mm/h:
+  Horizon    MAE(mm/h)    RMSE(mm/h)   ETS        CSI       
+  ------------------------------------------------------
+  t+15      0.20         1.06         0.0292     0.0296    
+  t+30      0.22         1.14         0.0025     0.0025    
+  t+45      0.23         1.18         0.0000     0.0000    
+  t+60      0.24         1.19         0.0000     0.0000     ← PRIMARY
+  AVG        ---          ---          0.0079     0.0080      ← AVG
+
+  Extreme Core @ 15 mm/h (secondary):
+  Horizon    CSI        BaseRate    
+  --------------------------------
+  t+15      0.0000     0.000984    
+  t+30      0.0000     0.000985    
+  t+45      0.0000     0.000984    
+  t+60      0.0000     0.000975    
+
+  Creating visualizations (epoch 2)...
+  Visualization saved: VALVIZ_CONVLSTM_CORRECT_CLIP4/epoch_002.png
+
+  ★★★ NEW BEST MODEL! Val Loss=0.4531 | ETS=0.0079 | CSI=0.0080 ★★★
+
+================================================================================
+EPOCH 3/30
+================================================================================
+  Horizon weights: [1.0, 1.0, 1.0, 1.0]
+
+  Results (Time: 4148.4s | LR: 9.877641e-05):
+    Train Loss [log] : 0.363691
+    Val   Loss [log] : 0.418006
+    Avg ETS@5mm/h   : 0.0337
+    Avg CSI@5mm/h   : 0.0343
+    Loss Change       : -0.035127
+
+  Operational Verification @ 5 mm/h:
+  Horizon    MAE(mm/h)    RMSE(mm/h)   ETS        CSI       
+  ------------------------------------------------------
+  t+15      0.18         1.02         0.0943     0.0958    
+  t+30      0.21         1.10         0.0390     0.0398    
+  t+45      0.23         1.15         0.0014     0.0015    
+  t+60      0.24         1.17         0.0001     0.0001     ← PRIMARY
+  AVG        ---          ---          0.0337     0.0343      ← AVG
+
+  Extreme Core @ 15 mm/h (secondary):
+  Horizon    CSI        BaseRate    
+  --------------------------------
+  t+15      0.0000     0.000984    
+  t+30      0.0000     0.000985    
+  t+45      0.0000     0.000984    
+  t+60      0.0000     0.000975    
+
+  Creating visualizations (epoch 3)...
+  Visualization saved: VALVIZ_CONVLSTM_CORRECT_CLIP4/epoch_003.png
+
+  ★★★ NEW BEST MODEL! Val Loss=0.4180 | ETS=0.0337 | CSI=0.0343 ★★★
+
+================================================================================
+EPOCH 4/30
+================================================================================
+  Horizon weights: [1.0, 1.0, 1.0, 1.0]
+
+  Results (Time: 4162.8s | LR: 9.783864e-05):
+    Train Loss [log] : 0.342558
+    Val   Loss [log] : 0.399932
+    Avg ETS@5mm/h   : 0.0529
+    Avg CSI@5mm/h   : 0.0538
+    Loss Change       : -0.018074
+
+  Operational Verification @ 5 mm/h:
+  Horizon    MAE(mm/h)    RMSE(mm/h)   ETS        CSI       
+  ------------------------------------------------------
+  t+15      0.18         0.99         0.1373     0.1395    
+  t+30      0.20         1.08         0.0596     0.0608    
+  t+45      0.22         1.13         0.0103     0.0105    
+  t+60      0.23         1.16         0.0043     0.0044     ← PRIMARY
+  AVG        ---          ---          0.0529     0.0538      ← AVG
+
+  Extreme Core @ 15 mm/h (secondary):
+  Horizon    CSI        BaseRate    
+  --------------------------------
+  t+15      0.0008     0.000984    
+  t+30      0.0000     0.000985    
+  t+45      0.0000     0.000984    
+  t+60      0.0000     0.000975    
+
+  Creating visualizations (epoch 4)...
+  Visualization saved: VALVIZ_CONVLSTM_CORRECT_CLIP4/epoch_004.png
+
+  ★★★ NEW BEST MODEL! Val Loss=0.3999 | ETS=0.0529 | CSI=0.0538 ★★★
+
+================================================================================
+EPOCH 5/30
+================================================================================
+  Horizon weights: [1.0, 1.0, 1.0, 1.0]
+
+  Results (Time: 4180.2s | LR: 9.665064e-05):
+    Train Loss [log] : 0.329722
+    Val   Loss [log] : 0.389272
+    Avg ETS@5mm/h   : 0.0623
+    Avg CSI@5mm/h   : 0.0634
+    Loss Change       : -0.010660
+
+  Operational Verification @ 5 mm/h:
+  Horizon    MAE(mm/h)    RMSE(mm/h)   ETS        CSI       
+  ------------------------------------------------------
+  t+15      0.18         0.98         0.1558     0.1583    
+  t+30      0.20         1.07         0.0701     0.0714    
+  t+45      0.22         1.13         0.0163     0.0166    
+  t+60      0.23         1.15         0.0071     0.0073     ← PRIMARY
+  AVG        ---          ---          0.0623     0.0634      ← AVG
+
+  Extreme Core @ 15 mm/h (secondary):
+  Horizon    CSI        BaseRate    
+  --------------------------------
+  t+15      0.0023     0.000984    
+  t+30      0.0000     0.000985    
+  t+45      0.0000     0.000984    
+  t+60      0.0000     0.000975    
+
+  Creating visualizations (epoch 5)...
+  Visualization saved: VALVIZ_CONVLSTM_CORRECT_CLIP4/epoch_005.png
+
+  ★★★ NEW BEST MODEL! Val Loss=0.3893 | ETS=0.0623 | CSI=0.0634 ★★★
+
+================================================================================
+EPOCH 6/30
+================================================================================
+  Horizon weights: [1.0, 1.0, 1.0, 1.0]
+
+  Results (Time: 4148.1s | LR: 9.522542e-05):
+    Train Loss [log] : 0.321126
+    Val   Loss [log] : 0.382002
+    Avg ETS@5mm/h   : 0.0702
+    Avg CSI@5mm/h   : 0.0714
+    Loss Change       : -0.007271
+
+  Operational Verification @ 5 mm/h:
+  Horizon    MAE(mm/h)    RMSE(mm/h)   ETS        CSI       
+  ------------------------------------------------------
+  t+15      0.17         0.97         0.1734     0.1760    
+  t+30      0.20         1.06         0.0793     0.0808    
+  t+45      0.22         1.12         0.0193     0.0197    
+  t+60      0.23         1.14         0.0090     0.0092     ← PRIMARY
+  AVG        ---          ---          0.0702     0.0714      ← AVG
+
+  Extreme Core @ 15 mm/h (secondary):
+  Horizon    CSI        BaseRate    
+  --------------------------------
+  t+15      0.0055     0.000984    
+  t+30      0.0001     0.000985    
+  t+45      0.0000     0.000984    
+  t+60      0.0000     0.000975    
+
+  Creating visualizations (epoch 6)...
+  Visualization saved: VALVIZ_CONVLSTM_CORRECT_CLIP4/epoch_006.png
+
+  ★★★ NEW BEST MODEL! Val Loss=0.3820 | ETS=0.0702 | CSI=0.0714 ★★★
+
+================================================================================
+EPOCH 7/30
+================================================================================
+  Horizon weights: [1.0, 1.0, 1.0, 1.0]
+
+  Results (Time: 4171.6s | LR: 9.357862e-05):
+    Train Loss [log] : 0.314617
+    Val   Loss [log] : 0.376823
+    Avg ETS@5mm/h   : 0.0842
+    Avg CSI@5mm/h   : 0.0857
+    Loss Change       : -0.005179
+
+  Operational Verification @ 5 mm/h:
+  Horizon    MAE(mm/h)    RMSE(mm/h)   ETS        CSI       
+  ------------------------------------------------------
+  t+15      0.17         0.96         0.1964     0.1995    
+  t+30      0.20         1.06         0.0976     0.0995    
+  t+45      0.21         1.11         0.0271     0.0277    
+  t+60      0.22         1.14         0.0156     0.0160     ← PRIMARY
+  AVG        ---          ---          0.0842     0.0857      ← AVG
+
+  Extreme Core @ 15 mm/h (secondary):
+  Horizon    CSI        BaseRate    
+  --------------------------------
+  t+15      0.0099     0.000984    
+  t+30      0.0001     0.000985    
+  t+45      0.0000     0.000984    
+  t+60      0.0000     0.000975    
+
+  Creating visualizations (epoch 7)...
+  Visualization saved: VALVIZ_CONVLSTM_CORRECT_CLIP4/epoch_007.png
+
+  ★★★ NEW BEST MODEL! Val Loss=0.3768 | ETS=0.0842 | CSI=0.0857 ★★★
+
+================================================================================
+EPOCH 8/30
+================================================================================
+  Horizon weights: [1.0, 1.0, 1.0, 1.0]
+
+  Results (Time: 4166.7s | LR: 9.172827e-05):
+    Train Loss [log] : 0.309655
+    Val   Loss [log] : 0.373322
+    Avg ETS@5mm/h   : 0.0824
+    Avg CSI@5mm/h   : 0.0838
+    Loss Change       : -0.003500
+
+  Operational Verification @ 5 mm/h:
+  Horizon    MAE(mm/h)    RMSE(mm/h)   ETS        CSI       
+  ------------------------------------------------------
+  t+15      0.17         0.96         0.1995     0.2025    
+  t+30      0.20         1.05         0.0973     0.0992    
+  t+45      0.21         1.11         0.0230     0.0234    
+  t+60      0.22         1.14         0.0097     0.0099     ← PRIMARY
+  AVG        ---          ---          0.0824     0.0838      ← AVG
+
+  Extreme Core @ 15 mm/h (secondary):
+  Horizon    CSI        BaseRate    
+  --------------------------------
+  t+15      0.0104     0.000984    
+  t+30      0.0001     0.000985    
+  t+45      0.0000     0.000984    
+  t+60      0.0000     0.000975    
+
+  Creating visualizations (epoch 8)...
+  Visualization saved: VALVIZ_CONVLSTM_CORRECT_CLIP4/epoch_008.png
+
+  ★★★ NEW BEST MODEL! Val Loss=0.3733 | ETS=0.0824 | CSI=0.0838 ★★★
+
+================================================================================
+EPOCH 9/30
+================================================================================
+  Horizon weights: [1.0, 1.0, 1.0, 1.0]
+
+  Results (Time: 4183.9s | LR: 8.969463e-05):
+    Train Loss [log] : 0.305625
+    Val   Loss [log] : 0.371055
+    Avg ETS@5mm/h   : 0.0790
+    Avg CSI@5mm/h   : 0.0803
+    Loss Change       : -0.002268
+
+  Operational Verification @ 5 mm/h:
+  Horizon    MAE(mm/h)    RMSE(mm/h)   ETS        CSI       
+  ------------------------------------------------------
+  t+15      0.17         0.95         0.1966     0.1996    
+  t+30      0.20         1.05         0.0933     0.0950    
+  t+45      0.21         1.11         0.0204     0.0208    
+  t+60      0.23         1.14         0.0058     0.0059     ← PRIMARY
+  AVG        ---          ---          0.0790     0.0803      ← AVG
+
+  Extreme Core @ 15 mm/h (secondary):
+  Horizon    CSI        BaseRate    
+  --------------------------------
+  t+15      0.0111     0.000984    
+  t+30      0.0001     0.000985    
+  t+45      0.0000     0.000984    
+  t+60      0.0000     0.000975    
+
+  Creating visualizations (epoch 9)...
+  Visualization saved: VALVIZ_CONVLSTM_CORRECT_CLIP4/epoch_009.png
+
+  ★★★ NEW BEST MODEL! Val Loss=0.3711 | ETS=0.0790 | CSI=0.0803 ★★★
+
+================================================================================
+EPOCH 10/30
+================================================================================
+  Horizon weights: [1.0, 1.0, 1.0, 1.0]
+
+  Results (Time: 4192.3s | LR: 8.750000e-05):
+    Train Loss [log] : 0.302166
+    Val   Loss [log] : 0.370002
+    Avg ETS@5mm/h   : 0.0687
+    Avg CSI@5mm/h   : 0.0698
+    Loss Change       : -0.001053
+
+  Operational Verification @ 5 mm/h:
+  Horizon    MAE(mm/h)    RMSE(mm/h)   ETS        CSI       
+  ------------------------------------------------------
+  t+15      0.17         0.95         0.1790     0.1816    
+  t+30      0.20         1.05         0.0769     0.0783    
+  t+45      0.21         1.11         0.0153     0.0157    
+  t+60      0.23         1.15         0.0035     0.0035     ← PRIMARY
+  AVG        ---          ---          0.0687     0.0698      ← AVG
+
+  Extreme Core @ 15 mm/h (secondary):
+  Horizon    CSI        BaseRate    
+  --------------------------------
+  t+15      0.0080     0.000984    
+  t+30      0.0001     0.000985    
+  t+45      0.0000     0.000984    
+  t+60      0.0000     0.000975    
+
+  Creating visualizations (epoch 10)...
+  Visualization saved: VALVIZ_CONVLSTM_CORRECT_CLIP4/epoch_010.png
+
+  ★★★ NEW BEST MODEL! Val Loss=0.3700 | ETS=0.0687 | CSI=0.0698 ★★★
+
+================================================================================
+EPOCH 11/30
+================================================================================
+  Horizon weights: [1.0, 1.0, 1.0, 1.0]
+
+  Results (Time: 4163.7s | LR: 8.516842e-05):
+    Train Loss [log] : 0.299175
+    Val   Loss [log] : 0.369828
+    Avg ETS@5mm/h   : 0.0669
+    Avg CSI@5mm/h   : 0.0680
+    Loss Change       : -0.000174
+
+  Operational Verification @ 5 mm/h:
+  Horizon    MAE(mm/h)    RMSE(mm/h)   ETS        CSI       
+  ------------------------------------------------------
+  t+15      0.17         0.95         0.1803     0.1830    
+  t+30      0.20         1.06         0.0720     0.0733    
+  t+45      0.22         1.11         0.0132     0.0134    
+  t+60      0.23         1.15         0.0022     0.0023     ← PRIMARY
+  AVG        ---          ---          0.0669     0.0680      ← AVG
+
+  Extreme Core @ 15 mm/h (secondary):
+  Horizon    CSI        BaseRate    
+  --------------------------------
+  t+15      0.0081     0.000984    
+  t+30      0.0001     0.000985    
+  t+45      0.0000     0.000984    
+  t+60      0.0000     0.000975    
+
+  Creating visualizations (epoch 11)...
+  Visualization saved: VALVIZ_CONVLSTM_CORRECT_CLIP4/epoch_011.png
+
+  ★★★ NEW BEST MODEL! Val Loss=0.3698 | ETS=0.0669 | CSI=0.0680 ★★★
+
+================================================================================
+EPOCH 12/30
+================================================================================
+  Horizon weights: [1.0, 1.0, 1.0, 1.0]
+
+  Results (Time: 4179.8s | LR: 8.272542e-05):
+    Train Loss [log] : 0.296520
+    Val   Loss [log] : 0.369753
+    Avg ETS@5mm/h   : 0.0695
+    Avg CSI@5mm/h   : 0.0707
+    Loss Change       : -0.000075
+
+  Operational Verification @ 5 mm/h:
+  Horizon    MAE(mm/h)    RMSE(mm/h)   ETS        CSI       
+  ------------------------------------------------------
+  t+15      0.17         0.95         0.1860     0.1888    
+  t+30      0.20         1.06         0.0748     0.0761    
+  t+45      0.22         1.11         0.0147     0.0150    
+  t+60      0.23         1.15         0.0027     0.0027     ← PRIMARY
+  AVG        ---          ---          0.0695     0.0707      ← AVG
+
+  Extreme Core @ 15 mm/h (secondary):
+  Horizon    CSI        BaseRate    
+  --------------------------------
+  t+15      0.0094     0.000984    
+  t+30      0.0002     0.000985    
+  t+45      0.0000     0.000984    
+  t+60      0.0000     0.000975    
+
+  Creating visualizations (epoch 12)...
+  Visualization saved: VALVIZ_CONVLSTM_CORRECT_CLIP4/epoch_012.png
+  No improvement for 1 epoch(s) (best val loss: 0.3698)
+
+================================================================================
+EPOCH 13/30
+================================================================================
+  Horizon weights: [1.0, 1.0, 1.0, 1.0]
+
+  Results (Time: 4209.3s | LR: 8.019779e-05):
+    Train Loss [log] : 0.294185
+    Val   Loss [log] : 0.366663
+    Avg ETS@5mm/h   : 0.0707
+    Avg CSI@5mm/h   : 0.0719
+    Loss Change       : -0.003090
+
+  Operational Verification @ 5 mm/h:
+  Horizon    MAE(mm/h)    RMSE(mm/h)   ETS        CSI       
+  ------------------------------------------------------
+  t+15      0.17         0.95         0.1859     0.1886    
+  t+30      0.20         1.05         0.0761     0.0775    
+  t+45      0.21         1.11         0.0164     0.0168    
+  t+60      0.23         1.15         0.0045     0.0046     ← PRIMARY
+  AVG        ---          ---          0.0707     0.0719      ← AVG
+
+  Extreme Core @ 15 mm/h (secondary):
+  Horizon    CSI        BaseRate    
+  --------------------------------
+  t+15      0.0107     0.000984    
+  t+30      0.0002     0.000985    
+  t+45      0.0000     0.000984    
+  t+60      0.0000     0.000975    
+
+  Creating visualizations (epoch 13)...
+  Visualization saved: VALVIZ_CONVLSTM_CORRECT_CLIP4/epoch_013.png
+
+  ★★★ NEW BEST MODEL! Val Loss=0.3667 | ETS=0.0707 | CSI=0.0719 ★★★
+
+================================================================================
+EPOCH 14/30
+================================================================================
+  Horizon weights: [1.0, 1.0, 1.0, 1.0]
+
+  Results (Time: 4218.3s | LR: 7.761321e-05):
+    Train Loss [log] : 0.291803
+    Val   Loss [log] : 0.366636
+    Avg ETS@5mm/h   : 0.0685
+    Avg CSI@5mm/h   : 0.0696
+    Loss Change       : -0.000028
+
+  Operational Verification @ 5 mm/h:
+  Horizon    MAE(mm/h)    RMSE(mm/h)   ETS        CSI       
+  ------------------------------------------------------
+  t+15      0.17         0.95         0.1815     0.1841    
+  t+30      0.20         1.05         0.0728     0.0741    
+  t+45      0.22         1.11         0.0156     0.0159    
+  t+60      0.23         1.15         0.0043     0.0044     ← PRIMARY
+  AVG        ---          ---          0.0685     0.0696      ← AVG
+
+  Extreme Core @ 15 mm/h (secondary):
+  Horizon    CSI        BaseRate    
+  --------------------------------
+  t+15      0.0100     0.000984    
+  t+30      0.0002     0.000985    
+  t+45      0.0001     0.000984    
+  t+60      0.0000     0.000975    
+
+  Creating visualizations (epoch 14)...
+  Visualization saved: VALVIZ_CONVLSTM_CORRECT_CLIP4/epoch_014.png
+  No improvement for 1 epoch(s) (best val loss: 0.3667)
+
+================================================================================
+EPOCH 15/30
+================================================================================
+  Horizon weights: [1.0, 1.0, 1.0, 1.0]
+
+  Results (Time: 4230.7s | LR: 7.500000e-05):
+    Train Loss [log] : 0.289664
+    Val   Loss [log] : 0.361244
+    Avg ETS@5mm/h   : 0.0704
+    Avg CSI@5mm/h   : 0.0715
+    Loss Change       : -0.005392
+
+  Operational Verification @ 5 mm/h:
+  Horizon    MAE(mm/h)    RMSE(mm/h)   ETS        CSI       
+  ------------------------------------------------------
+  t+15      0.17         0.95         0.1781     0.1807    
+  t+30      0.20         1.05         0.0755     0.0768    
+  t+45      0.21         1.10         0.0197     0.0201    
+  t+60      0.22         1.14         0.0083     0.0085     ← PRIMARY
+  AVG        ---          ---          0.0704     0.0715      ← AVG
+
+  Extreme Core @ 15 mm/h (secondary):
+  Horizon    CSI        BaseRate    
+  --------------------------------
+  t+15      0.0122     0.000984    
+  t+30      0.0003     0.000985    
+  t+45      0.0001     0.000984    
+  t+60      0.0000     0.000975    
+
+  Creating visualizations (epoch 15)...
+  Visualization saved: VALVIZ_CONVLSTM_CORRECT_CLIP4/epoch_015.png
+
+  ★★★ NEW BEST MODEL! Val Loss=0.3612 | ETS=0.0704 | CSI=0.0715 ★★★
+
+================================================================================
+EPOCH 16/30
+================================================================================
+  Horizon weights: [1.0, 1.0, 1.0, 1.0]
+
+  Results (Time: 4233.8s | LR: 7.238679e-05):
+    Train Loss [log] : 0.287399
+    Val   Loss [log] : 0.359166
+    Avg ETS@5mm/h   : 0.0782
+    Avg CSI@5mm/h   : 0.0795
+    Loss Change       : -0.002078
+
+  Operational Verification @ 5 mm/h:
+  Horizon    MAE(mm/h)    RMSE(mm/h)   ETS        CSI       
+  ------------------------------------------------------
+  t+15      0.17         0.94         0.1908     0.1936    
+  t+30      0.19         1.04         0.0877     0.0893    
+  t+45      0.21         1.10         0.0239     0.0243    
+  t+60      0.22         1.13         0.0105     0.0108     ← PRIMARY
+  AVG        ---          ---          0.0782     0.0795      ← AVG
+
+  Extreme Core @ 15 mm/h (secondary):
+  Horizon    CSI        BaseRate    
+  --------------------------------
+  t+15      0.0130     0.000984    
+  t+30      0.0004     0.000985    
+  t+45      0.0001     0.000984    
+  t+60      0.0000     0.000975    
+
+  Creating visualizations (epoch 16)...
+  Visualization saved: VALVIZ_CONVLSTM_CORRECT_CLIP4/epoch_016.png
+
+  ★★★ NEW BEST MODEL! Val Loss=0.3592 | ETS=0.0782 | CSI=0.0795 ★★★
+
+================================================================================
+EPOCH 17/30
+================================================================================
+  Horizon weights: [1.0, 1.0, 1.0, 1.0]
+
+  Results (Time: 4216.2s | LR: 6.980221e-05):
+    Train Loss [log] : 0.285656
+    Val   Loss [log] : 0.356687
+    Avg ETS@5mm/h   : 0.0766
+    Avg CSI@5mm/h   : 0.0778
+    Loss Change       : -0.002479
+
+  Operational Verification @ 5 mm/h:
+  Horizon    MAE(mm/h)    RMSE(mm/h)   ETS        CSI       
+  ------------------------------------------------------
+  t+15      0.17         0.94         0.1896     0.1923    
+  t+30      0.19         1.04         0.0847     0.0863    
+  t+45      0.21         1.10         0.0225     0.0230    
+  t+60      0.22         1.13         0.0095     0.0097     ← PRIMARY
+  AVG        ---          ---          0.0766     0.0778      ← AVG
+
+  Extreme Core @ 15 mm/h (secondary):
+  Horizon    CSI        BaseRate    
+  --------------------------------
+  t+15      0.0153     0.000984    
+  t+30      0.0004     0.000985    
+  t+45      0.0001     0.000984    
+  t+60      0.0000     0.000975    
+
+  Creating visualizations (epoch 17)...
+  Visualization saved: VALVIZ_CONVLSTM_CORRECT_CLIP4/epoch_017.png
+
+  ★★★ NEW BEST MODEL! Val Loss=0.3567 | ETS=0.0766 | CSI=0.0778 ★★★
+
+================================================================================
+EPOCH 18/30
+================================================================================
+  Horizon weights: [1.0, 1.0, 1.0, 1.0]
+
+  Results (Time: 4194.0s | LR: 6.727458e-05):
+    Train Loss [log] : 0.284144
+    Val   Loss [log] : 0.357840
+    Avg ETS@5mm/h   : 0.0746
+    Avg CSI@5mm/h   : 0.0757
+    Loss Change       : +0.001154
+
+  Operational Verification @ 5 mm/h:
+  Horizon    MAE(mm/h)    RMSE(mm/h)   ETS        CSI       
+  ------------------------------------------------------
+  t+15      0.17         0.94         0.1919     0.1947    
+  t+30      0.19         1.04         0.0808     0.0822    
+  t+45      0.21         1.10         0.0190     0.0194    
+  t+60      0.22         1.13         0.0066     0.0067     ← PRIMARY
+  AVG        ---          ---          0.0746     0.0757      ← AVG
+
+  Extreme Core @ 15 mm/h (secondary):
+  Horizon    CSI        BaseRate    
+  --------------------------------
+  t+15      0.0136     0.000984    
+  t+30      0.0003     0.000985    
+  t+45      0.0000     0.000984    
+  t+60      0.0000     0.000975    
+
+  Creating visualizations (epoch 18)...
+  Visualization saved: VALVIZ_CONVLSTM_CORRECT_CLIP4/epoch_018.png
+  No improvement for 1 epoch(s) (best val loss: 0.3567)
+
+================================================================================
+EPOCH 19/30
+================================================================================
+  Horizon weights: [1.0, 1.0, 1.0, 1.0]
+
+  Results (Time: 4230.9s | LR: 6.483158e-05):
+    Train Loss [log] : 0.282331
+    Val   Loss [log] : 0.358773
+    Avg ETS@5mm/h   : 0.0686
+    Avg CSI@5mm/h   : 0.0697
+    Loss Change       : +0.000933
+
+  Operational Verification @ 5 mm/h:
+  Horizon    MAE(mm/h)    RMSE(mm/h)   ETS        CSI       
+  ------------------------------------------------------
+  t+15      0.17         0.94         0.1779     0.1804    
+  t+30      0.20         1.05         0.0739     0.0752    
+  t+45      0.21         1.11         0.0175     0.0179    
+  t+60      0.23         1.14         0.0052     0.0053     ← PRIMARY
+  AVG        ---          ---          0.0686     0.0697      ← AVG
+
+  Extreme Core @ 15 mm/h (secondary):
+  Horizon    CSI        BaseRate    
+  --------------------------------
+  t+15      0.0118     0.000984    
+  t+30      0.0002     0.000985    
+  t+45      0.0000     0.000984    
+  t+60      0.0000     0.000975    
+
+  Creating visualizations (epoch 19)...
+  Visualization saved: VALVIZ_CONVLSTM_CORRECT_CLIP4/epoch_019.png
+  No improvement for 2 epoch(s) (best val loss: 0.3567)
+
+================================================================================
+EPOCH 20/30
+================================================================================
+  Horizon weights: [1.0, 1.0, 1.0, 1.0]
+
+  Results (Time: 4233.8s | LR: 6.250000e-05):
+    Train Loss [log] : 0.281084
+    Val   Loss [log] : 0.357748
+    Avg ETS@5mm/h   : 0.0757
+    Avg CSI@5mm/h   : 0.0769
+    Loss Change       : -0.001025
+
+  Operational Verification @ 5 mm/h:
+  Horizon    MAE(mm/h)    RMSE(mm/h)   ETS        CSI       
+  ------------------------------------------------------
+  t+15      0.17         0.94         0.1917     0.1944    
+  t+30      0.19         1.04         0.0818     0.0832    
+  t+45      0.21         1.10         0.0221     0.0226    
+  t+60      0.22         1.13         0.0074     0.0076     ← PRIMARY
+  AVG        ---          ---          0.0757     0.0769      ← AVG
+
+  Extreme Core @ 15 mm/h (secondary):
+  Horizon    CSI        BaseRate    
+  --------------------------------
+  t+15      0.0151     0.000984    
+  t+30      0.0003     0.000985    
+  t+45      0.0000     0.000984    
+  t+60      0.0000     0.000975    
+
+  Creating visualizations (epoch 20)...
+  Visualization saved: VALVIZ_CONVLSTM_CORRECT_CLIP4/epoch_020.png
+  No improvement for 3 epoch(s) (best val loss: 0.3567)
+
+================================================================================
+EPOCH 21/30
+================================================================================
+  Horizon weights: [1.0, 1.0, 1.0, 1.0]
+
+  Results (Time: 4245.9s | LR: 6.030537e-05):
+    Train Loss [log] : 0.278951
+    Val   Loss [log] : 0.364739
+    Avg ETS@5mm/h   : 0.0697
+    Avg CSI@5mm/h   : 0.0708
+    Loss Change       : +0.006992
+
+  Operational Verification @ 5 mm/h:
+  Horizon    MAE(mm/h)    RMSE(mm/h)   ETS        CSI       
+  ------------------------------------------------------
+  t+15      0.17         0.94         0.1821     0.1847    
+  t+30      0.20         1.05         0.0729     0.0742    
+  t+45      0.21         1.10         0.0182     0.0186    
+  t+60      0.23         1.14         0.0055     0.0056     ← PRIMARY
+  AVG        ---          ---          0.0697     0.0708      ← AVG
+
+  Extreme Core @ 15 mm/h (secondary):
+  Horizon    CSI        BaseRate    
+  --------------------------------
+  t+15      0.0138     0.000984    
+  t+30      0.0002     0.000985    
+  t+45      0.0000     0.000984    
+  t+60      0.0000     0.000975    
+
+  Creating visualizations (epoch 21)...
+  Visualization saved: VALVIZ_CONVLSTM_CORRECT_CLIP4/epoch_021.png
+  No improvement for 4 epoch(s) (best val loss: 0.3567)
+
+================================================================================
+EPOCH 22/30
+================================================================================
+  Horizon weights: [1.0, 1.0, 1.0, 1.0]
+
+  Results (Time: 4172.5s | LR: 5.827173e-05):
+    Train Loss [log] : 0.277245
+    Val   Loss [log] : 0.361873
+    Avg ETS@5mm/h   : 0.0849
+    Avg CSI@5mm/h   : 0.0862
+    Loss Change       : -0.002866
+
+  Operational Verification @ 5 mm/h:
+  Horizon    MAE(mm/h)    RMSE(mm/h)   ETS        CSI       
+  ------------------------------------------------------
+  t+15      0.17         0.93         0.2119     0.2150    
+  t+30      0.19         1.04         0.0927     0.0944    
+  t+45      0.21         1.10         0.0267     0.0272    
+  t+60      0.22         1.13         0.0081     0.0083     ← PRIMARY
+  AVG        ---          ---          0.0849     0.0862      ← AVG
+
+  Extreme Core @ 15 mm/h (secondary):
+  Horizon    CSI        BaseRate    
+  --------------------------------
+  t+15      0.0207     0.000984    
+  t+30      0.0004     0.000985    
+  t+45      0.0000     0.000984    
+  t+60      0.0000     0.000975    
+
+  Creating visualizations (epoch 22)...
+  Visualization saved: VALVIZ_CONVLSTM_CORRECT_CLIP4/epoch_022.png
+  No improvement for 5 epoch(s) (best val loss: 0.3567)
+
+================================================================================
+EPOCH 23/30
+================================================================================
+  Horizon weights: [1.0, 1.0, 1.0, 1.0]
+
+  Results (Time: 4198.3s | LR: 5.642138e-05):
+    Train Loss [log] : 0.275946
+    Val   Loss [log] : 0.363357
+    Avg ETS@5mm/h   : 0.0870
+    Avg CSI@5mm/h   : 0.0884
+    Loss Change       : +0.001484
+
+  Operational Verification @ 5 mm/h:
+  Horizon    MAE(mm/h)    RMSE(mm/h)   ETS        CSI       
+  ------------------------------------------------------
+  t+15      0.16         0.92         0.2160     0.2191    
+  t+30      0.19         1.03         0.0946     0.0963    
+  t+45      0.21         1.09         0.0282     0.0288    
+  t+60      0.22         1.13         0.0091     0.0093     ← PRIMARY
+  AVG        ---          ---          0.0870     0.0884      ← AVG
+
+  Extreme Core @ 15 mm/h (secondary):
+  Horizon    CSI        BaseRate    
+  --------------------------------
+  t+15      0.0209     0.000984    
+  t+30      0.0003     0.000985    
+  t+45      0.0000     0.000984    
+  t+60      0.0000     0.000975    
+
+  Creating visualizations (epoch 23)...
+  Visualization saved: VALVIZ_CONVLSTM_CORRECT_CLIP4/epoch_023.png
+  No improvement for 6 epoch(s) (best val loss: 0.3567)
+
+================================================================================
+EPOCH 24/30
+================================================================================
+  Horizon weights: [1.0, 1.0, 1.0, 1.0]
+
+  Results (Time: 4187.5s | LR: 5.477458e-05):
+    Train Loss [log] : 0.274128
+    Val   Loss [log] : 0.361020
+    Avg ETS@5mm/h   : 0.0834
+    Avg CSI@5mm/h   : 0.0848
+    Loss Change       : -0.002338
+
+  Operational Verification @ 5 mm/h:
+  Horizon    MAE(mm/h)    RMSE(mm/h)   ETS        CSI       
+  ------------------------------------------------------
+  t+15      0.16         0.93         0.2061     0.2091    
+  t+30      0.19         1.04         0.0914     0.0930    
+  t+45      0.21         1.10         0.0273     0.0279    
+  t+60      0.22         1.13         0.0090     0.0092     ← PRIMARY
+  AVG        ---          ---          0.0834     0.0848      ← AVG
+
+  Extreme Core @ 15 mm/h (secondary):
+  Horizon    CSI        BaseRate    
+  --------------------------------
+  t+15      0.0197     0.000984    
+  t+30      0.0003     0.000985    
+  t+45      0.0000     0.000984    
+  t+60      0.0000     0.000975    
+
+  Creating visualizations (epoch 24)...
+  Visualization saved: VALVIZ_CONVLSTM_CORRECT_CLIP4/epoch_024.png
+  No improvement for 7 epoch(s) (best val loss: 0.3567)
+
+================================================================================
+⚡ EARLY STOPPING
+================================================================================
+
+================================================================================
+TRAINING COMPLETE — Best Val Loss: 0.3567
+================================================================================
+
+
+================================================================================
+🎉 ALL DONE! 🎉
+================================================================================
+

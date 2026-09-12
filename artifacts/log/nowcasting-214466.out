@@ -1,0 +1,14 @@
+
+============================================================
+STORM THRESHOLD COMPUTATION (ULTRA-DEFENSIVE VERSION)
+============================================================
+CSV path: metadata/train_multihorizon.csv
+Percentile: 95.0
+Parallel jobs: 16
+Sample size: 10,000,000
+============================================================
+
+Using only 'train' split: 683444 files
+Total unique radar files: 719268
+
+❌ ERROR: 'radar_path'

@@ -1,0 +1,60 @@
+
+======================================================================
+TEST VISUALIZATION — TOP-5 BY p99(x)
+  Device      : cuda
+  Checkpoint  : CHECKPOINTS_CONVLSTM_CORRECT_CLIP6_COSINE/best.pth
+  Test CSV    : metadata/test_sampled_multihorizon.csv
+  Horizons    : [15, 30, 45, 60] min
+  Top-K       : 5
+  Rank by     : p99(x)  (raw mm/h, no log transform)
+======================================================================
+
+
+======================================================================
+ SatelliteRadarDataset Initialized (MULTI-HORIZON)
+======================================================================
+Metadata: metadata/test_sampled_multihorizon.csv
+Satellite Configuration:
+  Ch7: mean=36.83, std=12.58 (no clipping)
+  Ch9: mean=65.70, std=19.36 (no clipping)
+Radar Configuration:
+  Clip: [0, 128.00] mm/hr
+  Transform: log10(x + 0.001)
+Temporal Configuration:
+  History: 45 min
+  Cadence: 5 min
+  Forecast horizons: [15, 30, 45, 60] min
+  n_horizons: 4
+
+Initial samples: 16,926
+
+  → 9 timesteps
+  → Satellite: 18 channels
+  → Radar history: 9 channels
+  → Total input: 27 channels
+  → Target: [4, H, W] (one frame per horizon)
+======================================================================
+
+Test dataset: 16,926 samples
+
+Loading checkpoint: CHECKPOINTS_CONVLSTM_CORRECT_CLIP6_COSINE/best.pth
+Model loaded (epoch 2 | val_loss=0.00920454991315668)
+
+
+======================================================================
+TOP-5 SAMPLES FROM CSV  (ranked by 'p99(x)')  — raw mm/h
+  CSV         : metadata/test_sampled_multihorizon.csv
+  Total valid : 16,926 samples
+======================================================================
+  #1  dataset_idx=   7450  p99(x)=18.23 mm/h  max(x)=128.00 mm/h  time=2024-06-29 23:55:00
+  #2  dataset_idx=   7451  p99(x)=17.88 mm/h  max(x)=128.00 mm/h  time=2024-06-30 00:00:00
+  #3  dataset_idx=   7447  p99(x)=17.52 mm/h  max(x)=128.00 mm/h  time=2024-06-29 23:40:00
+  #4  dataset_idx=   7449  p99(x)=17.52 mm/h  max(x)=128.00 mm/h  time=2024-06-29 23:50:00
+  #5  dataset_idx=   7452  p99(x)=17.52 mm/h  max(x)=128.00 mm/h  time=2024-06-30 00:05:00
+
+Running model on top-5 samples...
+Inference done | preds shape: torch.Size([5, 4, 128, 128])
+
+
+Saving → test_top5_visualization.png  (DPI=150)
+Saved: test_top5_visualization.png

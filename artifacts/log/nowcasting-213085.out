@@ -1,0 +1,161 @@
+======================================================================
+METADATA SANITY CHECK — AFTER REGENERATION
+======================================================================
+
+======================================================================
+TRAIN MULTIHORIZON
+======================================================================
+
+1. SHAPE
+   Rows    : 683,448
+   Columns : 21
+
+2. MAX(X) CHECK — clip=128 mm/h
+   max(x) max   : 128.0000 mm/h
+   max(x) mean  : 26.2560 mm/h
+   Frames >= 128: 21,503 / 683,448 = 3.1%
+   Frames > 150 : 0  ← should be 0 (artifact threshold)
+   ✅ No artifacts above 150 mm/h
+
+3. P99(X) CHECK
+   p99 max  : 27.1250 mm/h
+   p99 mean : 1.6606 mm/h
+   p99 > 128: 0 frames  ← should be 0
+   ✅ p99 within clip range
+
+4. INTENSITY DISTRIBUTION (mm/h)
+   max(x) == 0         : 45,625 (6.7%)
+   max(x) < 15 mm/h    : 344,296 (50.4%)
+   max(x) 15-50 mm/h   : 228,244 (33.4%)
+   max(x) 50-80 mm/h   : 52,170 (7.6%)
+   max(x) 80-128 mm/h  : 58,734 (8.6%)
+   max(x) >= 128 mm/h  : 21,503 (3.1%) ← clipped
+
+5. NaN CHECK
+   nan_ratio mean : 0.4182
+   nan_ratio max  : 1.0000
+   all_nan rows   : 4
+
+6. RADAR PATH COLUMNS
+   Found: ['radar_path_15', 'radar_path_30', 'radar_path_45', 'radar_path_60']
+   radar_path_15 nulls: 0 ✅
+   radar_path_30 nulls: 0 ✅
+   radar_path_45 nulls: 0 ✅
+   radar_path_60 nulls: 0 ✅
+
+7. TIME RANGE
+   First : 2015-01-01 00:40:00
+   Last  : 2022-12-31 23:55:00
+
+8. LOG SPACE CHECK
+   log max (128 mm/h) : 2.1072
+   15  mm/h in log    : 1.1761  (55.8% of range)
+   80  mm/h in log    : 1.9031  (90.3% of range)
+   Wasted log range   : 0.0000 ✅
+
+======================================================================
+VAL MULTIHORIZON
+======================================================================
+
+1. SHAPE
+   Rows    : 90,457
+   Columns : 21
+
+2. MAX(X) CHECK — clip=128 mm/h
+   max(x) max   : 128.0000 mm/h
+   max(x) mean  : 26.4686 mm/h
+   Frames >= 128: 1,945 / 90,457 = 2.2%
+   Frames > 150 : 0  ← should be 0 (artifact threshold)
+   ✅ No artifacts above 150 mm/h
+
+3. P99(X) CHECK
+   p99 max  : 23.4062 mm/h
+   p99 mean : 1.9652 mm/h
+   p99 > 128: 0 frames  ← should be 0
+   ✅ p99 within clip range
+
+4. INTENSITY DISTRIBUTION (mm/h)
+   max(x) == 0         : 5,027 (5.6%)
+   max(x) < 15 mm/h    : 40,430 (44.7%)
+   max(x) 15-50 mm/h   : 36,007 (39.8%)
+   max(x) 50-80 mm/h   : 7,395 (8.2%)
+   max(x) 80-128 mm/h  : 6,617 (7.3%)
+   max(x) >= 128 mm/h  : 1,945 (2.2%) ← clipped
+
+5. NaN CHECK
+   nan_ratio mean : 0.4330
+   nan_ratio max  : 1.0000
+   all_nan rows   : 8
+
+6. RADAR PATH COLUMNS
+   Found: ['radar_path_15', 'radar_path_30', 'radar_path_45', 'radar_path_60']
+   radar_path_15 nulls: 0 ✅
+   radar_path_30 nulls: 0 ✅
+   radar_path_45 nulls: 0 ✅
+   radar_path_60 nulls: 0 ✅
+
+7. TIME RANGE
+   First : 2023-01-01 00:00:00
+   Last  : 2023-12-31 23:55:00
+
+8. LOG SPACE CHECK
+   log max (128 mm/h) : 2.1072
+   15  mm/h in log    : 1.1761  (55.8% of range)
+   80  mm/h in log    : 1.9031  (90.3% of range)
+   Wasted log range   : 0.0000 ✅
+
+======================================================================
+TEST MULTIHORIZON
+======================================================================
+
+1. SHAPE
+   Rows    : 89,240
+   Columns : 21
+
+2. MAX(X) CHECK — clip=128 mm/h
+   max(x) max   : 128.0000 mm/h
+   max(x) mean  : 28.2257 mm/h
+   Frames >= 128: 3,025 / 89,240 = 3.4%
+   Frames > 150 : 0  ← should be 0 (artifact threshold)
+   ✅ No artifacts above 150 mm/h
+
+3. P99(X) CHECK
+   p99 max  : 18.2344 mm/h
+   p99 mean : 1.8254 mm/h
+   p99 > 128: 0 frames  ← should be 0
+   ✅ p99 within clip range
+
+4. INTENSITY DISTRIBUTION (mm/h)
+   max(x) == 0         : 6,026 (6.8%)
+   max(x) < 15 mm/h    : 42,127 (47.2%)
+   max(x) 15-50 mm/h   : 30,929 (34.7%)
+   max(x) 50-80 mm/h   : 7,252 (8.1%)
+   max(x) 80-128 mm/h  : 8,910 (10.0%)
+   max(x) >= 128 mm/h  : 3,025 (3.4%) ← clipped
+
+5. NaN CHECK
+   nan_ratio mean : 0.4300
+   nan_ratio max  : 1.0000
+   all_nan rows   : 22
+
+6. RADAR PATH COLUMNS
+   Found: ['radar_path_15', 'radar_path_30', 'radar_path_45', 'radar_path_60']
+   radar_path_15 nulls: 0 ✅
+   radar_path_30 nulls: 0 ✅
+   radar_path_45 nulls: 0 ✅
+   radar_path_60 nulls: 0 ✅
+
+7. TIME RANGE
+   First : 2024-01-01 00:00:00
+   Last  : 2024-12-31 09:10:00
+
+8. LOG SPACE CHECK
+   log max (128 mm/h) : 2.1072
+   15  mm/h in log    : 1.1761  (55.8% of range)
+   80  mm/h in log    : 1.9031  (90.3% of range)
+   Wasted log range   : 0.0000 ✅
+
+======================================================================
+SANITY CHECK COMPLETE
+======================================================================
+

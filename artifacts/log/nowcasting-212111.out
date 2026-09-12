@@ -1,0 +1,109 @@
+
+================================================================================
+MULTI-HORIZON TRAINING — ConvLSTM Direct Multi-Step v2
+================================================================================
+Device        : cuda
+Loss Function : hybrid_weighted_mse
+Horizons      : [15, 30, 45, 60]
+n_horizons    : 4
+
+================================================================================
+TWO-THRESHOLD STRATEGY
+================================================================================
+Operational: 15.0 mm/h | Extreme: 80.0 mm/h (Manual fallback)
+================================================================================
+
+
+📂 Loading datasets...
+
+======================================================================
+ SatelliteRadarDataset Initialized (MULTI-HORIZON)
+======================================================================
+Metadata: metadata/train_sampled_multihorizon.csv
+Satellite Configuration:
+  Ch7: mean=35.92, std=13.95 (no clipping)
+  Ch9: mean=63.75, std=21.39 (no clipping)
+Radar Configuration:
+  Clip: [0, 400.00] mm/hr
+  Transform: log10(x + 0.001)
+Temporal Configuration:
+  History: 45 min
+  Cadence: 5 min
+  Forecast horizons: [15, 30, 45, 60] min
+  n_horizons: 4
+
+Initial samples: 234,703
+
+  → 9 timesteps
+  → Satellite: 18 channels
+  → Radar history: 9 channels
+  → Total input: 27 channels
+  → Target: [4, H, W] (one frame per horizon)
+======================================================================
+
+
+======================================================================
+ SatelliteRadarDataset Initialized (MULTI-HORIZON)
+======================================================================
+Metadata: metadata/val_sampled_multihorizon.csv
+Satellite Configuration:
+  Ch7: mean=35.92, std=13.95 (no clipping)
+  Ch9: mean=63.75, std=21.39 (no clipping)
+Radar Configuration:
+  Clip: [0, 400.00] mm/hr
+  Transform: log10(x + 0.001)
+Temporal Configuration:
+  History: 45 min
+  Cadence: 5 min
+  Forecast horizons: [15, 30, 45, 60] min
+  n_horizons: 4
+
+Initial samples: 31,038
+
+  → 9 timesteps
+  → Satellite: 18 channels
+  → Radar history: 9 channels
+  → Total input: 27 channels
+  → Target: [4, H, W] (one frame per horizon)
+======================================================================
+
+
+✅ Train: 234,703 | Val: 31,038
+
+🏗️  Building Multi-Horizon ConvLSTM Model...
+   history_minutes     : 45
+   cadence_minutes     : 5
+   n_timesteps         : 9
+   channels_per_step   : 3  (2 sat + 1 radar)
+   total input channels: 27  (expected 27)
+   output channels     : 4  (one per horizon)
+   Parameters          : 9,032,564
+
+================================================================================
+MULTI-HORIZON TRAINING — DIRECT MULTI-STEP SUPERVISED LEARNING v2
+================================================================================
+Model           : ConvLSTM Encoder-Decoder
+Loss Type       : HYBRID_WEIGHTED_MSE
+Horizons        : [15, 30, 45, 60] min
+Horizon weights : [0.4, 0.8, 1.2, 3.0]  (FIXED throughout training)
+Learning Rate   : 1.00e-04  (FIXED, no scheduler)
+Batch Size      : 8
+Grad Accum      : 8x (effective: 64)
+Checkpoint      : Mean ETS@15 mm/h across all horizons
+Verification    : ETS+CSI@15 mm/h | CSI@80 mm/h (extreme, secondary)
+Mixed Precision : True
+================================================================================
+
+✅ Using HybridWeightedMSE
+   Thresholds: 15.0/50.0/80.0 mm/h
+   Weights   : 3.0/8.0/15.0
+
+✅ Fixed LR=1.00e-04, no scheduler
+
+✅ Mixed Precision Training ENABLED
+
+
+================================================================================
+EPOCH 1/10
+================================================================================
+  Horizon weights (fixed): [0.4, 0.8, 1.2, 3.0]

@@ -1,0 +1,327 @@
+
+================================================================================
+MULTI-HORIZON TRAINING — ConvLSTM Direct Multi-Step v2
+================================================================================
+Device        : cuda
+Loss Function : hybrid_weighted_mse
+Horizons      : [15, 30, 45, 60]
+n_horizons    : 4
+
+================================================================================
+TWO-THRESHOLD STRATEGY
+================================================================================
+Operational: 15.0 mm/h | Extreme: 80.0 mm/h (Manual fallback)
+================================================================================
+
+
+📂 Loading datasets...
+
+======================================================================
+ SatelliteRadarDataset Initialized (MULTI-HORIZON)
+======================================================================
+Metadata: metadata/train_sampled_multihorizon.csv
+Satellite Configuration:
+  Ch7: mean=35.92, std=13.95 (no clipping)
+  Ch9: mean=63.75, std=21.39 (no clipping)
+Radar Configuration:
+  Clip: [0, 400.00] mm/hr
+  Transform: log10(x + 0.001)
+Temporal Configuration:
+  History: 60 min
+  Cadence: 5 min
+  Forecast horizons: [15, 30, 45, 60] min
+  n_horizons: 4
+
+Initial samples: 230,954
+
+  → 12 timesteps
+  → Satellite: 24 channels
+  → Radar history: 12 channels
+  → Total input: 36 channels
+  → Target: [4, H, W] (one frame per horizon)
+======================================================================
+
+
+======================================================================
+ SatelliteRadarDataset Initialized (MULTI-HORIZON)
+======================================================================
+Metadata: metadata/val_sampled_multihorizon.csv
+Satellite Configuration:
+  Ch7: mean=35.92, std=13.95 (no clipping)
+  Ch9: mean=63.75, std=21.39 (no clipping)
+Radar Configuration:
+  Clip: [0, 400.00] mm/hr
+  Transform: log10(x + 0.001)
+Temporal Configuration:
+  History: 60 min
+  Cadence: 5 min
+  Forecast horizons: [15, 30, 45, 60] min
+  n_horizons: 4
+
+Initial samples: 31,045
+
+  → 12 timesteps
+  → Satellite: 24 channels
+  → Radar history: 12 channels
+  → Total input: 36 channels
+  → Target: [4, H, W] (one frame per horizon)
+======================================================================
+
+
+✅ Train: 230,954 | Val: 31,045
+
+🏗️  Building Multi-Horizon ConvLSTM Model...
+   history_minutes     : 60
+   cadence_minutes     : 5
+   n_timesteps         : 12
+   channels_per_step   : 3  (2 sat + 1 radar)
+   total input channels: 36  (expected 36)
+   output channels     : 4  (one per horizon)
+   Parameters          : 4,037,284
+
+================================================================================
+MULTI-HORIZON TRAINING — DIRECT MULTI-STEP SUPERVISED LEARNING v2
+================================================================================
+Model           : ConvLSTM Encoder-Decoder
+Loss Type       : HYBRID_WEIGHTED_MSE
+Horizons        : [15, 30, 45, 60] min
+Horizon weights : [0.4, 0.6, 1.0, 3.0]  (FIXED throughout training)
+Learning Rate   : 1.00e-04  (FIXED, no scheduler)
+Batch Size      : 32
+Grad Accum      : 2x (effective: 64)
+Checkpoint      : Mean ETS@15 mm/h across all horizons
+Verification    : ETS+CSI@15 mm/h | CSI@80 mm/h (extreme, secondary)
+Mixed Precision : True
+================================================================================
+
+✅ Using HybridWeightedMSE
+   Thresholds: 15.0/50.0/80.0 mm/h
+   Weights   : 3.0/8.0/15.0
+
+✅ Fixed LR=1.00e-04, no scheduler
+
+✅ Mixed Precision Training ENABLED
+
+
+================================================================================
+EPOCH 1/30
+================================================================================
+  Horizon weights (fixed): [0.4, 0.6, 1.0, 3.0]
+
+  Results (Time: 8980.6s | LR: 0.000100):
+    Train Loss    : 0.776307
+    Val   Loss    : 0.718290
+    Mean ETS@15  : 0.3921  ← CHECKPOINT METRIC
+
+  Operational Verification @ 15 mm/h:
+  Horizon    MAE        RMSE       ETS        CSI       
+  --------------------------------------------------
+  t+15      0.2347     0.5052     0.4772     0.4963    
+  t+30      0.2826     0.5851     0.4098     0.4298    
+  t+45      0.3212     0.6396     0.3604     0.3805    
+  t+60      0.3565     0.6841     0.3211     0.3411     ← PRIMARY
+
+  Extreme Core @ 80 mm/h (secondary — not used for selection):
+  Horizon    CSI        BaseRate    
+  --------------------------------
+  t+15      0.1671     0.004232    
+  t+30      0.1043     0.004245    
+  t+45      0.0740     0.004259    
+  t+60      0.0481     0.004270    
+
+  Creating visualizations (epoch 1)...
+
+  ★★★ NEW BEST MODEL! Mean ETS@15 = 0.3921 (improved by 999.3921) ★★★
+
+================================================================================
+EPOCH 2/30
+================================================================================
+  Horizon weights (fixed): [0.4, 0.6, 1.0, 3.0]
+
+  Results (Time: 8935.1s | LR: 0.000100):
+    Train Loss    : 0.527659
+    Val   Loss    : 0.724464
+    Mean ETS@15  : 0.3958  ← CHECKPOINT METRIC
+
+  Operational Verification @ 15 mm/h:
+  Horizon    MAE        RMSE       ETS        CSI       
+  --------------------------------------------------
+  t+15      0.2300     0.4964     0.4888     0.5078    
+  t+30      0.2833     0.5825     0.4158     0.4358    
+  t+45      0.3266     0.6430     0.3614     0.3817    
+  t+60      0.3659     0.6905     0.3170     0.3372     ← PRIMARY
+
+  Extreme Core @ 80 mm/h (secondary — not used for selection):
+  Horizon    CSI        BaseRate    
+  --------------------------------
+  t+15      0.1869     0.004232    
+  t+30      0.1093     0.004245    
+  t+45      0.0757     0.004259    
+  t+60      0.0448     0.004270    
+
+    ETS Change: +0.0036 from last epoch
+
+  Creating visualizations (epoch 2)...
+
+  ★★★ NEW BEST MODEL! Mean ETS@15 = 0.3958 (improved by 0.0036) ★★★
+
+================================================================================
+EPOCH 3/30
+================================================================================
+  Horizon weights (fixed): [0.4, 0.6, 1.0, 3.0]
+
+  Results (Time: 8860.0s | LR: 0.000100):
+    Train Loss    : 0.486191
+    Val   Loss    : 0.743480
+    Mean ETS@15  : 0.3956  ← CHECKPOINT METRIC
+
+  Operational Verification @ 15 mm/h:
+  Horizon    MAE        RMSE       ETS        CSI       
+  --------------------------------------------------
+  t+15      0.2178     0.4865     0.4951     0.5138    
+  t+30      0.2726     0.5738     0.4166     0.4364    
+  t+45      0.3176     0.6340     0.3581     0.3781    
+  t+60      0.3566     0.6817     0.3127     0.3327     ← PRIMARY
+
+  Extreme Core @ 80 mm/h (secondary — not used for selection):
+  Horizon    CSI        BaseRate    
+  --------------------------------
+  t+15      0.2010     0.004232    
+  t+30      0.1187     0.004245    
+  t+45      0.0807     0.004259    
+  t+60      0.0469     0.004270    
+
+    ETS Change: -0.0001 from last epoch
+
+  Creating visualizations (epoch 3)...
+  No improvement for 1 epoch(s) (best ETS: 0.3958)
+
+================================================================================
+EPOCH 4/30
+================================================================================
+  Horizon weights (fixed): [0.4, 0.6, 1.0, 3.0]
+
+  Results (Time: 8943.0s | LR: 0.000100):
+    Train Loss    : 0.459637
+    Val   Loss    : 0.755203
+    Mean ETS@15  : 0.3968  ← CHECKPOINT METRIC
+
+  Operational Verification @ 15 mm/h:
+  Horizon    MAE        RMSE       ETS        CSI       
+  --------------------------------------------------
+  t+15      0.2134     0.4824     0.4984     0.5170    
+  t+30      0.2699     0.5733     0.4173     0.4371    
+  t+45      0.3114     0.6367     0.3585     0.3789    
+  t+60      0.3456     0.6850     0.3130     0.3334     ← PRIMARY
+
+  Extreme Core @ 80 mm/h (secondary — not used for selection):
+  Horizon    CSI        BaseRate    
+  --------------------------------
+  t+15      0.1936     0.004232    
+  t+30      0.1085     0.004245    
+  t+45      0.0725     0.004259    
+  t+60      0.0421     0.004270    
+
+    ETS Change: +0.0011 from last epoch
+
+  Creating visualizations (epoch 4)...
+
+  ★★★ NEW BEST MODEL! Mean ETS@15 = 0.3968 (improved by 0.0010) ★★★
+
+================================================================================
+EPOCH 5/30
+================================================================================
+  Horizon weights (fixed): [0.4, 0.6, 1.0, 3.0]
+
+  Results (Time: 8915.6s | LR: 0.000100):
+    Train Loss    : 0.441316
+    Val   Loss    : 0.767982
+    Mean ETS@15  : 0.3969  ← CHECKPOINT METRIC
+
+  Operational Verification @ 15 mm/h:
+  Horizon    MAE        RMSE       ETS        CSI       
+  --------------------------------------------------
+  t+15      0.2116     0.4789     0.5013     0.5199    
+  t+30      0.2675     0.5707     0.4175     0.4374    
+  t+45      0.3106     0.6350     0.3570     0.3773    
+  t+60      0.3472     0.6850     0.3117     0.3322     ← PRIMARY
+
+  Extreme Core @ 80 mm/h (secondary — not used for selection):
+  Horizon    CSI        BaseRate    
+  --------------------------------
+  t+15      0.1993     0.004232    
+  t+30      0.1163     0.004245    
+  t+45      0.0765     0.004259    
+  t+60      0.0508     0.004270    
+
+    ETS Change: +0.0001 from last epoch
+
+  Creating visualizations (epoch 5)...
+  No improvement for 1 epoch(s) (best ETS: 0.3968)
+
+================================================================================
+EPOCH 6/30
+================================================================================
+  Horizon weights (fixed): [0.4, 0.6, 1.0, 3.0]
+
+  Results (Time: 9441.0s | LR: 0.000100):
+    Train Loss    : 0.427626
+    Val   Loss    : 0.774484
+    Mean ETS@15  : 0.3969  ← CHECKPOINT METRIC
+
+  Operational Verification @ 15 mm/h:
+  Horizon    MAE        RMSE       ETS        CSI       
+  --------------------------------------------------
+  t+15      0.2087     0.4771     0.5026     0.5212    
+  t+30      0.2656     0.5733     0.4177     0.4378    
+  t+45      0.3057     0.6397     0.3565     0.3771    
+  t+60      0.3390     0.6900     0.3107     0.3315     ← PRIMARY
+
+  Extreme Core @ 80 mm/h (secondary — not used for selection):
+  Horizon    CSI        BaseRate    
+  --------------------------------
+  t+15      0.2030     0.004232    
+  t+30      0.1201     0.004245    
+  t+45      0.0776     0.004259    
+  t+60      0.0516     0.004270    
+
+    ETS Change: +0.0000 from last epoch
+
+  Creating visualizations (epoch 6)...
+  No improvement for 2 epoch(s) (best ETS: 0.3968)
+
+================================================================================
+EPOCH 7/30
+================================================================================
+  Horizon weights (fixed): [0.4, 0.6, 1.0, 3.0]
+
+  Results (Time: 9507.0s | LR: 0.000100):
+    Train Loss    : 0.416969
+    Val   Loss    : 0.789420
+    Mean ETS@15  : 0.3920  ← CHECKPOINT METRIC
+
+  Operational Verification @ 15 mm/h:
+  Horizon    MAE        RMSE       ETS        CSI       
+  --------------------------------------------------
+  t+15      0.2062     0.4750     0.5048     0.5232    
+  t+30      0.2612     0.5695     0.4149     0.4344    
+  t+45      0.3025     0.6356     0.3490     0.3688    
+  t+60      0.3374     0.6862     0.2994     0.3192     ← PRIMARY
+
+  Extreme Core @ 80 mm/h (secondary — not used for selection):
+  Horizon    CSI        BaseRate    
+  --------------------------------
+  t+15      0.2103     0.004232    
+  t+30      0.1123     0.004245    
+  t+45      0.0695     0.004259    
+  t+60      0.0431     0.004270    
+
+    ETS Change: -0.0049 from last epoch
+
+  Creating visualizations (epoch 7)...
+  No improvement for 3 epoch(s) (best ETS: 0.3968)
+
+================================================================================
+EPOCH 8/30
+================================================================================
+  Horizon weights (fixed): [0.4, 0.6, 1.0, 3.0]

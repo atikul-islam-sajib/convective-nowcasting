@@ -1,0 +1,23 @@
+  Train E01:   0%|          | 0/7959 [00:00<?, ?batch/s]  Train E01:   0%|          | 0/7959 [00:07<?, ?batch/s]
+Traceback (most recent call last):
+  File "/home/fe/sajib/projects/weather-learning/correct_code_clip8.py", line 1548, in <module>
+    train(model, train_loader, val_loader, cfg, transform,
+  File "/home/fe/sajib/projects/weather-learning/correct_code_clip8.py", line 1304, in train
+    train_metrics = train_epoch(
+  File "/home/fe/sajib/projects/weather-learning/correct_code_clip8.py", line 963, in train_epoch
+    loss, per_horizon_losses = compute_multihorizon_loss(
+  File "/home/fe/sajib/projects/weather-learning/correct_code_clip8.py", line 744, in compute_multihorizon_loss
+    loss_h     = loss_fn(pred_h, target_h, mask_h)
+  File "/home/fe/sajib/miniconda3/envs/weather/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/fe/sajib/miniconda3/envs/weather/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/fe/sajib/projects/weather-learning/correct_code_clip8.py", line 655, in forward
+    storm_loss = torch.nn.functional.binary_cross_entropy(
+  File "/home/fe/sajib/miniconda3/envs/weather/lib/python3.10/site-packages/torch/nn/functional.py", line 3569, in binary_cross_entropy
+    return torch._C._nn.binary_cross_entropy(input, target, weight, reduction_enum)
+RuntimeError: torch.nn.functional.binary_cross_entropy and torch.nn.BCELoss are unsafe to autocast.
+Many models use a sigmoid layer right before the binary cross entropy layer.
+In this case, combine the two layers using torch.nn.functional.binary_cross_entropy_with_logits
+or torch.nn.BCEWithLogitsLoss.  binary_cross_entropy_with_logits and BCEWithLogits are
+safe to autocast.

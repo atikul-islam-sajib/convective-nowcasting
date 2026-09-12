@@ -1,0 +1,88 @@
+
+======================================================================
+PATCH METADATA PRE-SAMPLING — ALL SPLITS
+======================================================================
+out_dir:        metadata_patch
+patch:          128x128  stride=128
+season_tag:     all
+p99_top_ratio:  0.05
+prob:           0.9
+splits:         ['train', 'val', 'test']
+======================================================================
+
+======================================================================
+PRE-SAMPLING TRAIN
+======================================================================
+Input:          metadata_patch/train_patch_128x128_s128_all.csv
+Output:         metadata_patch/train_patch_128x128_s128_all_sampled.csv
+p99_top_ratio:  0.05 (top 5%)
+prob:           0.9 (top kept=0.90, rest kept=0.10)
+seed:           1
+======================================================================
+Loaded: 543,256 samples
+Clean samples: 543,256
+
+SAMPLING STATISTICS:
+----------------------------------------------------------------------
+  Threshold:       q=0.950 → p99(x_seq) >= 6.1172
+  Top bucket:      28,181 samples  → kept 25,341  (90%)
+  Rest bucket:     515,075 samples → kept 51,702  (10%)
+  Total kept:      77,043 / 543,256  (14.18%)
+  Top ratio kept:  32.9%  (original: 5%)
+----------------------------------------------------------------------
+Saved: metadata_patch/train_patch_128x128_s128_all_sampled.csv  (77,043 rows)
+
+======================================================================
+PRE-SAMPLING VAL
+======================================================================
+Input:          metadata_patch/val_patch_128x128_s128_all.csv
+Output:         metadata_patch/val_patch_128x128_s128_all_sampled.csv
+p99_top_ratio:  0.05 (top 5%)
+prob:           0.9 (top kept=0.90, rest kept=0.10)
+seed:           2
+======================================================================
+Loaded: 121,470 samples
+Clean samples: 121,470
+
+SAMPLING STATISTICS:
+----------------------------------------------------------------------
+  Threshold:       q=0.950 → p99(x_seq) >= 6.0060
+  Top bucket:      6,074 samples  → kept 5,477  (90%)
+  Rest bucket:     115,396 samples → kept 11,586  (10%)
+  Total kept:      17,063 / 121,470  (14.05%)
+  Top ratio kept:  32.1%  (original: 5%)
+----------------------------------------------------------------------
+Saved: metadata_patch/val_patch_128x128_s128_all_sampled.csv  (17,063 rows)
+
+======================================================================
+PRE-SAMPLING TEST
+======================================================================
+Input:          metadata_patch/test_patch_128x128_s128_all.csv
+Output:         metadata_patch/test_patch_128x128_s128_all_sampled.csv
+p99_top_ratio:  0.05 (top 5%)
+prob:           0.9 (top kept=0.90, rest kept=0.10)
+seed:           3
+======================================================================
+Loaded: 60,372 samples
+Clean samples: 60,372
+
+SAMPLING STATISTICS:
+----------------------------------------------------------------------
+  Threshold:       q=0.950 → p99(x_seq) >= 6.4805
+  Top bucket:      3,080 samples  → kept 2,776  (90%)
+  Rest bucket:     57,292 samples → kept 5,633  (10%)
+  Total kept:      8,409 / 60,372  (13.93%)
+  Top ratio kept:  33.0%  (original: 5%)
+----------------------------------------------------------------------
+Saved: metadata_patch/test_patch_128x128_s128_all_sampled.csv  (8,409 rows)
+
+======================================================================
+SUMMARY
+======================================================================
+  train:     77,043 samples → metadata_patch/train_patch_128x128_s128_all_sampled.csv
+  val  :     17,063 samples → metadata_patch/val_patch_128x128_s128_all_sampled.csv
+  test :      8,409 samples → metadata_patch/test_patch_128x128_s128_all_sampled.csv
+======================================================================
+Done! Ready for training.
+======================================================================
+

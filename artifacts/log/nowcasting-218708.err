@@ -1,0 +1,7 @@
+Traceback (most recent call last):
+  File "/home/fe/sajib/projects/weather-learning/inference_correct.py", line 514, in <module>
+    test_dataset = SatelliteRadarPatchDataset(
+  File "/home/fe/sajib/projects/weather-learning/src/datasets/satellite_radar_patch_dataset.py", line 273, in __init__
+    raise ValueError(
+ValueError: Metadata CSV missing columns: ['datetime', 'patch_row', 'patch_col']
+Available: ['split', 'reference_time', 'radar_time_15', 'radar_path_15', 'radar_time_30', 'radar_path_30', 'radar_time_45', 'radar_path_45', 'radar_time_60', 'radar_path_60', 'valid_cells', 'nan_cells', 'nan_ratio', 'all_nan', 'max(x)', 'sum(x)', 'sum(x**2)', 'log(sum(x))', 'log(sum(x**2))', 'p95(x)', 'p99(x)']

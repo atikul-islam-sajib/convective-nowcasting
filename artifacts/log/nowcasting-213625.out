@@ -1,0 +1,223 @@
+
+================================================================================
+MULTI-HORIZON TRAINING — ConvLSTM Direct Multi-Step v2
+================================================================================
+  Device        : cuda
+  Loss Function : hybrid_weighted_mse
+  Data Unit     : mm/h  (NO *12 conversion)
+  Clip Max      : 128.0 mm/h
+  Horizons      : [15, 30, 45, 60]
+  n_horizons    : 4
+
+================================================================================
+TWO-THRESHOLD STRATEGY  [DATA UNIT: mm/h]
+================================================================================
+  Operational : 10.0 mm/h
+  Extreme     : 40.0 mm/h (Manual fallback)
+================================================================================
+
+
+================================================================================
+CLIP CONFIGURATION VERIFICATION  [DATA UNIT: mm/h]
+================================================================================
+  clip_max          : 128.00 mm/h
+  log space max     : 2.1072
+  10  mm/h in log   : 1.0000  (47.5% of range)
+  50  mm/h in log   : 1.6990  (80.6% of range)
+  80  mm/h in log   : 1.9031  (90.3% of range)
+  128 mm/h in log   : 2.1072  (100.0% of range)
+  Artifact threshold: 150.0 mm/h → nan
+  NOTE: Data is mm/h — NO *12 conversion applied
+================================================================================
+
+
+📂 Loading datasets...
+
+======================================================================
+ SatelliteRadarDataset Initialized (MULTI-HORIZON)
+======================================================================
+Metadata: metadata/train_sampled_multihorizon.csv
+Satellite Configuration:
+  Ch7: mean=36.83, std=12.58 (no clipping)
+  Ch9: mean=65.70, std=19.36 (no clipping)
+Radar Configuration:
+  Clip: [0, 128.00] mm/hr
+  Transform: log10(x + 0.001)
+Temporal Configuration:
+  History: 45 min
+  Cadence: 5 min
+  Forecast horizons: [15, 30, 45, 60] min
+  n_horizons: 4
+
+Initial samples: 127,342
+
+  → 9 timesteps
+  → Satellite: 18 channels
+  → Radar history: 9 channels
+  → Total input: 27 channels
+  → Target: [4, H, W] (one frame per horizon)
+======================================================================
+
+
+======================================================================
+ SatelliteRadarDataset Initialized (MULTI-HORIZON)
+======================================================================
+Metadata: metadata/val_sampled_multihorizon.csv
+Satellite Configuration:
+  Ch7: mean=36.83, std=12.58 (no clipping)
+  Ch9: mean=65.70, std=19.36 (no clipping)
+Radar Configuration:
+  Clip: [0, 128.00] mm/hr
+  Transform: log10(x + 0.001)
+Temporal Configuration:
+  History: 45 min
+  Cadence: 5 min
+  Forecast horizons: [15, 30, 45, 60] min
+  n_horizons: 4
+
+Initial samples: 16,940
+
+  → 9 timesteps
+  → Satellite: 18 channels
+  → Radar history: 9 channels
+  → Total input: 27 channels
+  → Target: [4, H, W] (one frame per horizon)
+======================================================================
+
+
+✅ Train: 127,342 | Val: 16,940
+
+🏗️  Building Multi-Horizon ConvLSTM Model...
+   history_minutes     : 45
+   cadence_minutes     : 5
+   n_timesteps         : 9
+   channels_per_step   : 3  (2 sat + 1 radar)
+   total input channels: 27  (expected 27)
+   output channels     : 4  (one per horizon)
+   Parameters          : 9,032,564
+
+================================================================================
+MULTI-HORIZON TRAINING — DIRECT MULTI-STEP SUPERVISED LEARNING v2
+================================================================================
+  Data Unit       : mm/h (NO *12 conversion)
+  Clip Max        : 128.0 mm/h
+  Artifact Thr    : 150.0 mm/h → nan
+  Loss Type       : HYBRID_WEIGHTED_MSE
+  Horizons        : [15, 30, 45, 60] min
+  Horizon weights : [0.4, 0.8, 1.0, 2.0]  (FIXED)
+  Learning Rate   : 1.00e-04
+  Batch Size      : 16
+  Grad Accum      : 4x (effective: 64)
+  Checkpoint      : Mean ETS@10 mm/h
+  Verification    : ETS+CSI@10 mm/h | CSI@40 mm/h (extreme, secondary)
+  Mixed Precision : True
+================================================================================
+
+✅ Using HybridWeightedMSE
+
+✅ AdamW | LR=1.00e-04
+✅ ReduceLROnPlateau Scheduler ENABLED (monitoring Mean ETS)
+
+✅ Mixed Precision Training ENABLED
+
+Starting from scratch.
+
+
+================================================================================
+EPOCH 1/10
+================================================================================
+  Horizon weights: [0.4, 0.8, 1.0, 2.0]
+
+  Results (Time: 6111.9s | LR: 1.000000e-04):
+    Train Loss    : 0.516202
+    Val   Loss    : 0.466379
+    Mean ETS@10 : 0.0658
+
+  Operational Verification @ 10 mm/h:
+  Horizon    MAE        RMSE       ETS        CSI       
+  --------------------------------------------------
+  t+15      0.2392     0.4954     0.1242     0.1250    
+  t+30      0.2872     0.5706     0.0737     0.0743    
+  t+45      0.3413     0.6273     0.0437     0.0441    
+  t+60      0.3652     0.6664     0.0214     0.0216     ← PRIMARY
+
+  Extreme Core @ 40 mm/h (secondary):
+  Horizon    CSI        BaseRate    
+  --------------------------------
+  t+15      0.0288     0.000082    
+  t+30      0.0034     0.000082    
+  t+45      0.0001     0.000082    
+  t+60      0.0000     0.000082    
+
+  Creating visualizations (epoch 1)...
+  Visualization saved: VALVIZ_CONVLSTM_CORRECT_CLIP2/epoch_001.png
+
+  ★★★ NEW BEST MODEL! Mean ETS = 0.0658 ★★★
+
+================================================================================
+EPOCH 2/10
+================================================================================
+  Horizon weights: [0.4, 0.8, 1.0, 2.0]
+
+  Results (Time: 6108.5s | LR: 1.000000e-04):
+    Train Loss    : 0.359849
+    Val   Loss    : 0.470515
+    Mean ETS@10 : 0.0733
+    ETS Change    : +0.0076
+
+  Operational Verification @ 10 mm/h:
+  Horizon    MAE        RMSE       ETS        CSI       
+  --------------------------------------------------
+  t+15      0.2240     0.4826     0.1431     0.1439    
+  t+30      0.2730     0.5651     0.0820     0.0826    
+  t+45      0.3196     0.6274     0.0469     0.0473    
+  t+60      0.3554     0.6726     0.0213     0.0215     ← PRIMARY
+
+  Extreme Core @ 40 mm/h (secondary):
+  Horizon    CSI        BaseRate    
+  --------------------------------
+  t+15      0.0348     0.000082    
+  t+30      0.0047     0.000082    
+  t+45      0.0006     0.000082    
+  t+60      0.0000     0.000082    
+
+  Creating visualizations (epoch 2)...
+  Visualization saved: VALVIZ_CONVLSTM_CORRECT_CLIP2/epoch_002.png
+
+  ★★★ NEW BEST MODEL! Mean ETS = 0.0733 ★★★
+
+================================================================================
+EPOCH 3/10
+================================================================================
+  Horizon weights: [0.4, 0.8, 1.0, 2.0]
+
+  Results (Time: 6078.8s | LR: 1.000000e-04):
+    Train Loss    : 0.336733
+    Val   Loss    : 0.477102
+    Mean ETS@10 : 0.0714
+    ETS Change    : -0.0019
+
+  Operational Verification @ 10 mm/h:
+  Horizon    MAE        RMSE       ETS        CSI       
+  --------------------------------------------------
+  t+15      0.2222     0.4756     0.1430     0.1437    
+  t+30      0.2731     0.5644     0.0747     0.0752    
+  t+45      0.3139     0.6310     0.0415     0.0418    
+  t+60      0.3502     0.6795     0.0266     0.0269     ← PRIMARY
+
+  Extreme Core @ 40 mm/h (secondary):
+  Horizon    CSI        BaseRate    
+  --------------------------------
+  t+15      0.0299     0.000082    
+  t+30      0.0032     0.000082    
+  t+45      0.0010     0.000082    
+  t+60      0.0006     0.000082    
+
+  Creating visualizations (epoch 3)...
+  Visualization saved: VALVIZ_CONVLSTM_CORRECT_CLIP2/epoch_003.png
+  No improvement for 1 epoch(s) (best: 0.0733)
+
+================================================================================
+EPOCH 4/10
+================================================================================
+  Horizon weights: [0.4, 0.8, 1.0, 2.0]
