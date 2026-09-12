@@ -1,0 +1,32 @@
+{
+  "full_image_metadata_generation": {
+    "split": "test",
+    "radar_base": "/home/fe/sajib/scratch/weather-data/radar_de",
+    "satellite_base": "/home/fe/sajib/scratch/weather-data/satellite_de_regridded",
+    "date_range": {
+      "start": "2024-01-01 00:00",
+      "end": "2024-12-31 23:55"
+    },
+    "input_frames": "4 x 5min",
+    "horizons_min": [
+      15,
+      30,
+      45,
+      60
+    ],
+    "channels": [
+      "CH7",
+      "CH9"
+    ],
+    "summer_only": true,
+    "season": "JJAS",
+    "workers": 12,
+    "output": "metadata_patch/test_fullimage_summer.csv",
+    "timepoints_raw_pre_summer_filter": 105408,
+    "processing_time": "06:22",
+    "processing_rate_samples_per_second": 275.4,
+    "valid_full_image_samples": 32021,
+    "saved_rows": 32021,
+    "ready_for_testing": true
+  }
+}

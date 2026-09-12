@@ -1,0 +1,86 @@
+{
+  "report": "MONTH-WISE MISSING FILE REPORT",
+  "months": [
+    6,
+    7,
+    8,
+    9
+  ],
+  "season": "JJAS",
+  "year": 2024,
+  "summary": {
+    "total_scanned": 35136,
+    "total_valid": 32021,
+    "total_missing": 3115,
+    "valid_percentage": 91.13
+  },
+  "monthly": [
+    {
+      "month": "2024-06",
+      "total": 8640,
+      "valid": 8043,
+      "any_missing": 597,
+      "radar_history_missing": 0,
+      "satellite_missing": 597,
+      "radar_target_missing": 0,
+      "valid_percentage": 93.09
+    },
+    {
+      "month": "2024-07",
+      "total": 8928,
+      "valid": 8351,
+      "any_missing": 577,
+      "radar_history_missing": 0,
+      "satellite_missing": 577,
+      "radar_target_missing": 0,
+      "valid_percentage": 93.54
+    },
+    {
+      "month": "2024-08",
+      "total": 8928,
+      "valid": 7563,
+      "any_missing": 1365,
+      "radar_history_missing": 0,
+      "satellite_missing": 1365,
+      "radar_target_missing": 0,
+      "valid_percentage": 84.71
+    },
+    {
+      "month": "2024-09",
+      "total": 8640,
+      "valid": 8064,
+      "any_missing": 576,
+      "radar_history_missing": 0,
+      "satellite_missing": 576,
+      "radar_target_missing": 0,
+      "valid_percentage": 93.33
+    }
+  ],
+  "missing_file_categories": {
+    "radar_history": 0,
+    "satellite": 3115,
+    "radar_target": 0
+  },
+  "example_missing_paths": {
+    "2024-06": [
+      "/home/fe/sajib/scratch/weather-data/satellite_de_regridded/2024/06/18/091500_CH7.npy",
+      "/home/fe/sajib/scratch/weather-data/satellite_de_regridded/2024/06/18/091500_CH9.npy",
+      "/home/fe/sajib/scratch/weather-data/satellite_de_regridded/2024/06/18/092000_CH7.npy"
+    ],
+    "2024-07": [
+      "/home/fe/sajib/scratch/weather-data/satellite_de_regridded/2024/07/01/153000_CH7.npy",
+      "/home/fe/sajib/scratch/weather-data/satellite_de_regridded/2024/07/01/153000_CH9.npy"
+    ],
+    "2024-08": [
+      "/home/fe/sajib/scratch/weather-data/satellite_de_regridded/2024/08/13/090500_CH7.npy",
+      "/home/fe/sajib/scratch/weather-data/satellite_de_regridded/2024/08/13/090500_CH9.npy",
+      "/home/fe/sajib/scratch/weather-data/satellite_de_regridded/2024/08/13/091000_CH7.npy"
+    ],
+    "2024-09": [
+      "/home/fe/sajib/scratch/weather-data/satellite_de_regridded/2024/09/10/091500_CH7.npy",
+      "/home/fe/sajib/scratch/weather-data/satellite_de_regridded/2024/09/10/091500_CH9.npy",
+      "/home/fe/sajib/scratch/weather-data/satellite_de_regridded/2024/09/10/092000_CH7.npy"
+    ]
+  },
+  "source_report": "missing_file_report.csv"
+}
