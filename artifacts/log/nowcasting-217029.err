@@ -1,6 +1,0 @@
-Traceback (most recent call last):
-  File "/home/fe/sajib/projects/weather-learning/correct_code_clip6_cosine_annealing_4W_ST.py", line 1365, in <module>
-    train(model, train_loader, val_loader, cfg, transform,
-  File "/home/fe/sajib/projects/weather-learning/correct_code_clip6_cosine_annealing_4W_ST.py", line 1144, in train
-    opt.load_state_dict(ckpt['optimizer_state_dict'])
-KeyError: 'optimizer_state_dict'

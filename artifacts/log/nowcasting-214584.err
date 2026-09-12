@@ -1,2 +1,0 @@
-/home/fe/sajib/projects/weather-learning/pixel_counts_clip4.py:20: RuntimeWarning: All-NaN slice encountered
-  gt = np.nanmax(np.stack(arrays, axis=0), axis=0)
