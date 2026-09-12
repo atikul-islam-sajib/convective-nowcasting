@@ -41,6 +41,10 @@ metadata/*.csv
 
 # ouput
 artifacts/inference/
+artifacts/balance/
+artifacts/log/
+artifacts/test_full_image/
+
 
 # Output directories from inference/visualization scripts
 INFERENCE_*/
