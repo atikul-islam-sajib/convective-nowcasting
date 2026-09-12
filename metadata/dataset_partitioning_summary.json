@@ -1,0 +1,86 @@
+{
+  "dataset_partitioning": {
+    "splits": {
+      "train": {
+        "period": "2015-2022",
+        "duration": "8 years",
+        "samples_before": 27197532,
+        "samples_after": 12851153
+      },
+      "validation": {
+        "period": "2023",
+        "duration": "1 year",
+        "samples_before": 3377596,
+        "samples_after": 1586763
+      },
+      "test": {
+        "period": "2024",
+        "duration": "1 year",
+        "samples": 32021,
+        "note": "full-domain per-timepoint count (not patch-level); not subjected to two-bucket sampling"
+      }
+    },
+    "temporal_split_purpose": "chronological split to prevent information leakage between train/validation/test",
+    "season_restriction": "JJAS (June-September)"
+  },
+
+  "generation_config": {
+    "radar_base": "/home/fe/sajib/scratch/weather-data/radar_de",
+    "sat_base": "/home/fe/sajib/scratch/weather-data/satellite_de_regridded",
+    "channels": ["CH7", "CH9"],
+    "num_in_frames": 4,
+    "stride_minutes": 5,
+    "horizons_minutes": [15, 30, 45, 60],
+    "t_jump_minutes": 5,
+    "patch_height": 256,
+    "patch_width": 256,
+    "stride_patch": 64,
+    "grid_rows": 1100,
+    "grid_cols": 900,
+    "nan_threshold": 0.3,
+    "patch_positions_per_timepoint": 154,
+    "summer_only_months": [6, 7, 8, 9]
+  },
+
+  "two_bucket_quantile_sampling": {
+    "p99_top_ratio_r": 0.3829,
+    "retention_probability_p": 0.6171,
+    "formula": "p = 1 - r",
+    "note": "r set to the empirical proportion of training patches with measurable precipitation (p99(x_seq) > 0); p derived so that p = 1 - r yields an exact 1:1 top:rest balance in the training set",
+    "train_seed": 1,
+    "val_seed": 2,
+    "applied_to": ["train", "validation"],
+    "not_applied_to": ["test"]
+  },
+
+  "train_verification": {
+    "jjas_timepoints_scanned": 281088,
+    "valid_multiframe_timepoints": 257546,
+    "total_valid_patches": 27197532,
+    "average_patches_per_valid_timepoint": 105.602619,
+    "average_patches_per_valid_timepoint_pct_of_154": 68.57,
+    "verification_method": "independent from-scratch recomputation, matched exactly (27,197,532 == 27,197,532)"
+  },
+
+  "test_full_image_inference": {
+    "sliding_window_patch_size": 256,
+    "sliding_window_overlap": 64,
+    "patches_per_full_image": 30,
+    "row_starts": [0, 192, 384, 576, 768, 844],
+    "col_starts": [0, 192, 384, 576, 644],
+    "blend_method": "cosine-weighted",
+    "total_valid_timepoints_2024_jjas": 32021,
+    "file_existence_only_rate_2024": 91.13
+  },
+
+  "cross_check_summary": {
+    "table_3_3_satellite_availability_check": "consistent (exceeding annual marginal rate mathematically implies JJAS-specific satellite availability is higher than annual average)",
+    "table_3_4_radar_nan_area_argument": "consistent (~4-6 percentage point gap explained by nan_threshold tolerance)",
+    "train_val_rain_fraction_stability": {
+      "train_positive_rain_patch_fraction_pct": 38.29,
+      "val_positive_rain_patch_fraction_pct": 37.02,
+      "difference_pp": 1.27
+    },
+    "no_contradictions_found": true
+  }
+}
