@@ -10,7 +10,7 @@
   "year": 2024,
   "summary": {
     "total_scanned": 35136,
-    "total_valid": 32021,
+    "total_valid": 32021, 
     "total_missing": 3115,
     "valid_percentage": 91.13
   },

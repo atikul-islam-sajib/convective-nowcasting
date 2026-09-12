@@ -37,8 +37,8 @@
     "original_top_ratio": 0.38
   },
   "val": {
-    "input": "metadata_patch/val_patch_256x256_summer.csv",
-    "output": "metadata_patch/val_patch_256x256_summer_sampled.csv",
+    "input": "metadata_patch/val_patch_256x256_s64_summer.csv",
+    "output": "metadata_patch/val_patch_256x256_s64_summer_sampled.csv",
     "p99_top_ratio": 0.3829,
     "prob": 0.6171,
     "seed": 2,
