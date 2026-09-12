@@ -181,50 +181,148 @@ def verify_count(
         pd.DataFrame({'datetime': valid_timestamps}).to_csv(out_timestamps_csv, index=False)
         print(f"Saved valid timestamps list: {out_timestamps_csv}")
 
-    # ------------------------------------------------------------------
-    # JSON OUTPUT -- schema matches dataset_partitioning_summary.json
-    # (generation_config + a "<split>_verification" block)
-    # ------------------------------------------------------------------
+    generation_config = {
+        "radar_base": radar_base,
+        "sat_base": sat_base,
+        "channels": channels,
+        "num_in_frames": num_in_frames,
+        "stride_minutes": stride_minutes,
+        "horizons_minutes": horizons_minutes,
+        "t_jump_minutes": t_jump_minutes,
+        "patch_height": patch_height,
+        "patch_width": patch_width,
+        "stride_patch": stride_patch,
+        "grid_rows": grid_rows,
+        "grid_cols": grid_cols,
+        "nan_threshold": nan_threshold,
+        "patch_positions_per_timepoint": n_patch_positions,
+        "summer_only_months": [6, 7, 8, 9] if summer_only else None,
+    }
+
+    verification_block = {
+        "date_range": {"start": start_date, "end": end_date},
+        "jjas_timepoints_scanned": n_scanned,
+        "valid_multiframe_timepoints": n_valid_timepoints,
+        "total_valid_patches": total_valid_patches,
+        "average_patches_per_valid_timepoint": avg_patches_per_valid_tp,
+        "average_patches_per_valid_timepoint_pct_of_max": round(avg_pct_of_max, 2),
+        "verification_method": "independent from-scratch recomputation of patches_counts_stat.py logic",
+    }
+
+    result = {
+        "generation_config": generation_config,
+        f"{split_label}_verification": verification_block,
+    }
+
     if out_json:
-        result = {
-            "generation_config": {
-                "radar_base": radar_base,
-                "sat_base": sat_base,
-                "channels": channels,
-                "num_in_frames": num_in_frames,
-                "stride_minutes": stride_minutes,
-                "horizons_minutes": horizons_minutes,
-                "t_jump_minutes": t_jump_minutes,
-                "patch_height": patch_height,
-                "patch_width": patch_width,
-                "stride_patch": stride_patch,
-                "grid_rows": grid_rows,
-                "grid_cols": grid_cols,
-                "nan_threshold": nan_threshold,
-                "patch_positions_per_timepoint": n_patch_positions,
-                "summer_only_months": [6, 7, 8, 9] if summer_only else None,
-            },
-            f"{split_label}_verification": {
-                "date_range": {"start": start_date, "end": end_date},
-                "jjas_timepoints_scanned": n_scanned,
-                "valid_multiframe_timepoints": n_valid_timepoints,
-                "total_valid_patches": total_valid_patches,
-                "average_patches_per_valid_timepoint": avg_patches_per_valid_tp,
-                "average_patches_per_valid_timepoint_pct_of_max": round(avg_pct_of_max, 2),
-                "verification_method": "independent from-scratch recomputation of patches_counts_stat.py logic",
-            },
-        }
         os.makedirs(os.path.dirname(out_json) or '.', exist_ok=True)
         with open(out_json, 'w') as f:
             json.dump(result, f, indent=2)
         print(f"Saved JSON summary: {out_json}")
 
-    return n_valid_timepoints, total_valid_patches
+    return n_valid_timepoints, total_valid_patches, result
+
+
+def build_master_json(
+    computed_result,
+    val_verification_json=None,
+    train_samples_after=None,
+    val_samples_after=None,
+    test_period=None,
+    test_duration=None,
+    test_samples=None,
+    p99_top_ratio_r=None,
+    retention_probability_p=None,
+    train_seed=None,
+    val_seed=None,
+    sliding_window_patch_size=None,
+    sliding_window_overlap=None,
+    out_master_json="dataset_partitioning_summary.json",
+):
+    generation_config = computed_result["generation_config"]
+
+    verifications = {}
+    for key, val in computed_result.items():
+        if key.endswith("_verification"):
+            verifications[key] = val
+
+    if val_verification_json and os.path.exists(val_verification_json):
+        with open(val_verification_json, 'r') as f:
+            other = json.load(f)
+        for key, val in other.items():
+            if key.endswith("_verification"):
+                verifications[key] = val
+
+    train_v = verifications.get("train_verification")
+    val_v   = verifications.get("val_verification")
+
+    master = {
+        "dataset_partitioning": {
+            "splits": {},
+            "temporal_split_purpose": "chronological split to prevent information leakage between train/validation/test",
+            "season_restriction": "JJAS (June-September)",
+        },
+        "generation_config": generation_config,
+        "verification_results": verifications,
+    }
+
+    if train_v is not None:
+        master["dataset_partitioning"]["splits"]["train"] = {
+            "period": train_v["date_range"]["start"][:4] + "-" + train_v["date_range"]["end"][:4],
+            "samples_before": train_v["total_valid_patches"],
+            "samples_after": train_samples_after,
+            "samples_before_source": "computed by this script (independent recomputation)",
+            "samples_after_source": "externally supplied (from presample.py output)" if train_samples_after is not None else None,
+        }
+
+    if val_v is not None:
+        master["dataset_partitioning"]["splits"]["validation"] = {
+            "period": val_v["date_range"]["start"][:4],
+            "samples_before": val_v["total_valid_patches"],
+            "samples_after": val_samples_after,
+            "samples_before_source": "computed by this script (independent recomputation)",
+            "samples_after_source": "externally supplied (from presample.py output)" if val_samples_after is not None else None,
+        }
+
+    if test_samples is not None:
+        master["dataset_partitioning"]["splits"]["test"] = {
+            "period": test_period,
+            "duration": test_duration,
+            "samples": test_samples,
+            "note": "full-domain per-timepoint count (not patch-level); not subjected to two-bucket sampling",
+            "source": "externally supplied (from generate_test_data_full_image.py output)",
+        }
+
+    if p99_top_ratio_r is not None or retention_probability_p is not None:
+        master["two_bucket_quantile_sampling"] = {
+            "p99_top_ratio_r": p99_top_ratio_r,
+            "retention_probability_p": retention_probability_p,
+            "formula": "p = 1 - r",
+            "train_seed": train_seed,
+            "val_seed": val_seed,
+            "applied_to": ["train", "validation"],
+            "not_applied_to": ["test"],
+            "source": "externally supplied (from presample.py configuration)",
+        }
+
+    if sliding_window_patch_size is not None:
+        master["test_full_image_inference"] = {
+            "sliding_window_patch_size": sliding_window_patch_size,
+            "sliding_window_overlap": sliding_window_overlap,
+            "source": "externally supplied (from inference script configuration)",
+        }
+
+    os.makedirs(os.path.dirname(out_master_json) or '.', exist_ok=True)
+    with open(out_master_json, 'w') as f:
+        json.dump(master, f, indent=2)
+    print(f"Saved MASTER JSON: {out_master_json}")
+
+    return master
 
 
 def get_parser():
     parser = argparse.ArgumentParser(
-        description="Independently verify the patch-count math from the original generation script"
+        description="Independently verify the patch-count math, and optionally build a merged master JSON"
     )
     parser.add_argument('--radar_base', type=str,
         default='/home/fe/sajib/scratch/weather-data/radar_de')
@@ -255,7 +353,31 @@ def get_parser():
     parser.add_argument('--out_timestamps_csv', type=str, default=None,
         help="Optional: save the list of valid multi-frame timestamps to this CSV")
     parser.add_argument('--out_json', type=str, default=None,
-        help="Optional: save a JSON summary (schema matches dataset_partitioning_summary.json)")
+        help="Optional: save this run's own JSON summary (generation_config + <split>_verification)")
+
+    # --- master-JSON merge options (all externally-known constants; NOT computed here) ---
+    parser.add_argument('--build_master_json', action='store_true',
+        help="After computing this run's verification, also build a combined master JSON.")
+    parser.add_argument('--val_verification_json', type=str, default=None,
+        help="Path to a previously-saved val_verification.json (or train_verification.json, "
+             "whichever this run did NOT just compute) to merge in.")
+    parser.add_argument('--train_samples_after', type=int, default=None,
+        help="Known 'after sampling' count for train, from presample.py output.")
+    parser.add_argument('--val_samples_after', type=int, default=None,
+        help="Known 'after sampling' count for val, from presample.py output.")
+    parser.add_argument('--test_period', type=str, default=None)
+    parser.add_argument('--test_duration', type=str, default=None)
+    parser.add_argument('--test_samples', type=int, default=None,
+        help="Known test sample count, from generate_test_data_full_image.py output.")
+    parser.add_argument('--p99_top_ratio_r', type=float, default=None,
+        help="Known r used in presample.py.")
+    parser.add_argument('--retention_probability_p', type=float, default=None,
+        help="Known p used in presample.py.")
+    parser.add_argument('--train_seed', type=int, default=None)
+    parser.add_argument('--val_seed', type=int, default=None)
+    parser.add_argument('--sliding_window_patch_size', type=int, default=None)
+    parser.add_argument('--sliding_window_overlap', type=int, default=None)
+    parser.add_argument('--out_master_json', type=str, default='dataset_partitioning_summary.json')
 
     return parser
 
@@ -264,7 +386,7 @@ if __name__ == "__main__":
     parser = get_parser()
     args = parser.parse_args()
 
-    verify_count(
+    _, _, computed_result = verify_count(
         radar_base       = args.radar_base,
         sat_base         = args.sat_base,
         start_date       = args.start_date,
@@ -288,3 +410,21 @@ if __name__ == "__main__":
         out_timestamps_csv = args.out_timestamps_csv,
         out_json         = args.out_json,
     )
+
+    if args.build_master_json:
+        build_master_json(
+            computed_result           = computed_result,
+            val_verification_json     = args.val_verification_json,
+            train_samples_after       = args.train_samples_after,
+            val_samples_after         = args.val_samples_after,
+            test_period               = args.test_period,
+            test_duration             = args.test_duration,
+            test_samples              = args.test_samples,
+            p99_top_ratio_r           = args.p99_top_ratio_r,
+            retention_probability_p   = args.retention_probability_p,
+            train_seed                = args.train_seed,
+            val_seed                  = args.val_seed,
+            sliding_window_patch_size = args.sliding_window_patch_size,
+            sliding_window_overlap    = args.sliding_window_overlap,
+            out_master_json           = args.out_master_json,
+        )
