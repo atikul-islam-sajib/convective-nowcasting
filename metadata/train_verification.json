@@ -1,0 +1,44 @@
+{
+  "generation_config": {
+    "radar_base": "/home/fe/sajib/scratch/weather-data/radar_de",
+    "sat_base": "/home/fe/sajib/scratch/weather-data/satellite_de_regridded",
+    "channels": [
+      "CH7",
+      "CH9"
+    ],
+    "num_in_frames": 4,
+    "stride_minutes": 5,
+    "horizons_minutes": [
+      15,
+      30,
+      45,
+      60
+    ],
+    "t_jump_minutes": 5,
+    "patch_height": 256,
+    "patch_width": 256,
+    "stride_patch": 64,
+    "grid_rows": 1100,
+    "grid_cols": 900,
+    "nan_threshold": 0.3,
+    "patch_positions_per_timepoint": 154,
+    "summer_only_months": [
+      6,
+      7,
+      8,
+      9
+    ]
+  },
+  "train_verification": {
+    "date_range": {
+      "start": "2015-01-01 00:00",
+      "end": "2022-12-31 23:55"
+    },
+    "jjas_timepoints_scanned": 281088,
+    "valid_multiframe_timepoints": 257546,
+    "total_valid_patches": 27197532,
+    "average_patches_per_valid_timepoint": 105.60261856134439,
+    "average_patches_per_valid_timepoint_pct_of_max": 68.57,
+    "verification_method": "independent from-scratch recomputation of patches_counts_stat.py logic"
+  }
+}
